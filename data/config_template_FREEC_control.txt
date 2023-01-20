@@ -1,0 +1,25 @@
+[general]
+
+ploidy = 2
+window = 10000
+minCNAlength = 2
+chrLenFile = {chrLenFile}
+outputDir = {outdir}
+gemMappabilityFile = /omics/groups/OE0219/internal/Etienne/data/mappability/out100m2_hg19.gem
+maxThreads = 8
+contaminationAdjustment = TRUE
+sex = {SEX}
+readCountThreshold = 100
+
+[sample]
+
+mateFile = {BAMFILE_TUMOR}
+inputFormat = BAM
+mateOrientation = FR
+
+[control]
+
+mateFile = {BAMFILE_NORMAL}
+inputFormat = BAM
+mateOrientation = FR
+

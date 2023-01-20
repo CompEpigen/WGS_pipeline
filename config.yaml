@@ -1,0 +1,40 @@
+# Sample information - This needs to be edited !!
+output_dir: /path/to/output_dir
+samples: [sample1,sample2]
+#metadata_file: /omics/groups/OE0219/internal/Etienne/WGS/pipeline/WGS/data/metadata_ckAML.tsv
+
+
+
+######################################################################################
+# Filters for SVs
+# Mininmum number of paired reads supporting a SV
+manta_minPR: 5 
+# Minimum number of split reads supporting a SV
+manta_minSR: 5
+# Minimum length of SVs
+manta_minLen: 40000
+# (optional) Path to a Panel of Normal: bed file containing regions where SVs were identified in healthy samples.
+manta_pon : /omics/groups/OE0219/internal/Etienne/data/PoN/PoN_SV_1000G.bed
+# (optional) bed file containing regions of low mappability. 
+manta_mappability: /omics/groups/OE0219/internal/Etienne/data/mappability/mappability75.bed
+
+
+
+# Reference
+reference_fasta: /omics/groups/OE0219/internal/Etienne/data/reference/hs37d5_PhiX.fa
+chrLenFile: /omics/groups/OE0219/internal/Etienne/data/reference/hg19.len
+
+# Tool binaries
+manta_bin: /omics/groups/OE0219/internal/Etienne/WGS/SV/manta/manta-1.6.0.centos6_x86_64/bin
+freec_bin: /omics/groups/OE0219/internal/Etienne/tools/FREEC-11.6/src/freec
+
+#SNVs
+target_genes_intervals: /omics/groups/OE0219/internal/Etienne/data/genes/gene_intervals_AML.list
+target_genes_intervals_bed: /omics/groups/OE0219/internal/Etienne/data/genes/gene_intervals_AML.bed
+germline_resource: /omics/groups/OE0219/internal/Etienne/data/germline_variants/gnomadSNP001.vcf.gz
+germline_full: /omics/groups/OE0219/internal/Etienne/data/germline_variants/af-only-gnomad.raw.sites.vcf.gz
+SNPs_vcf: /omics/groups/OE0219/internal/Etienne/data/germline_variants/gnomadSNP001.vcf.gz
+SNPs_gene_bed: /omics/groups/OE0219/internal/Etienne/data/germline_variants/gnomadSNP001.bed
+SNV_pon: /omics/groups/OE0219/internal/Etienne/data/PoN/Mutect2-WGS-panel-b37.vcf
+SNV_COSMIC: /omics/groups/OE0219/internal/Etienne/WGS/SNV/CosmicCodingMutsFiltered.vcf.gz
+genes_intervals: /omics/groups/OE0219/internal/Etienne/data/genes/genes_intervals/genes_intervals
