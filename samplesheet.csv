@@ -1,0 +1,2 @@
+sample,sex,path_bam,path_bam_control
+HLD5,M,/omics/odcf/project/OE0219/tme_nsclc/sequencing/whole_genome_sequencing/view-by-pid/OE0219_TME_NSCLC_HLD5/tumor-adc-dissociated1/paired/merged-alignment/tumor-adc-dissociated1_OE0219_TME_NSCLC_HLD5_merged.mdup.bam,/omics/odcf/project/OE0219/tme_nsclc/sequencing/whole_genome_sequencing/view-by-pid/OE0219_TME_NSCLC_HLD5/normal-lung-dissociated1/paired/merged-alignment/normal-lung-dissociated1_OE0219_TME_NSCLC_HLD5_merged.mdup.bam

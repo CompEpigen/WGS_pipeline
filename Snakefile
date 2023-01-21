@@ -1,68 +1,82 @@
+import pandas as pd 
+import pysam
+
 chromosomes = [str(x) for x in range(1,23)] + ["X","Y"]
 chromosomes_noY = [str(x) for x in range(1,23)] + ["X"]
 
-ruleorder: run_FREEC > run_FREEC_control >  run_manta > run_manta_control > postprocess_manta > postprocess_manta_control > run_mutect2 >postprocess_mutect2 > run_mutect2_control 
 
+df_samplesheet = pd.read_csv(config["samplesheet"],sep=",",index_col=0)
 
-if isinstance(config["samples"], str):
-	samples = []
-	with open(config["samples"],"r") as infile:
-		for line in infile:
-			samples.append(line.rstrip("\n"))
+if not "sex" in df_samplesheet.columns:
+	df_samplesheet["sex"] = ["XX" for x in df_samplesheet.index] # default: XX
 else:
-	samples = config["samples"]
+	df_samplesheet["sex"] = ["XX" if x in ["F","female","Female","XX"] else "XY" for x in df_samplesheet["sex"]]
+
+samples_control=[]
+samples_nocontrol=[]
+if config["use_control"]:
+	for sample in df_samplesheet.index:
+		if "path_bam_control" in df_samplesheet.columns and df_samplesheet.loc[sample,"path_bam_control"]!="":
+			samples_control.append(sample)
+		else:
+			samples_nocontrol.append(sample)
+else:
+	for sample in df_samplesheet.index:
+		samples_nocontrol.append(sample)
+		if "path_bam_control" in df_samplesheet.columns and df_samplesheet.loc[sample,"path_bam_control"]!="":
+			samples_nocontrol.append(sample+"_control")
+
+
+# Mutect2 needs the sample name of the control in the header of the bam file.
+if "path_bam_control" in df_samplesheet.columns:
+	control_samplenames=[]
+	for sample in df_samplesheet.index:
+		if df_samplesheet.loc[sample,"path_bam_control"]!="":
+			pysam_file = pysam.AlignmentFile(df_samplesheet.loc[sample,"path_bam_control"],"rb")
+			control_samplenames.append(pysam_file.header["RG"][0]["SM"])
+		else:
+			control_samplenames.append("")
+	df_samplesheet["control_samplename"] = control_samplenames
+
 
 samples_RNA=[]
-if "samples_RNA" in config:
-	with open(config["samples_RNA"],"r") as infile:
-		for line in infile:
-			samples_RNA.append(line.rstrip("\n"))
-
-sample_sex={}
-for sample in samples:
-	sample_sex[sample] = "XX"
-if "metadata_file" in config.keys():
-	with open(config["metadata_file"],"r") as infile:
-		tmp = infile.readline()
-		for line in infile:
-			linesplit = line.rstrip("\n").split("\t")
-			if linesplit[1] in ["F","Female","female"]:
-				sample_sex[linesplit[0]] = "XX"
-			else:
-				sample_sex[linesplit[0]] = "XY"
-
-if not "normal_suffix" in config:
-	config["normal_suffix"] = "normal"
-if not "tumor_suffix" in config:
-	config["tumor_suffix"] = "tumor"
-if not "normal_sample_name" in config:
-	config["normal_sample_name"] = "normal"
-if not "template_FREEC" in config:
-	config["template_FREEC"] = "data/config_template_FREEC.txt"
-if not "template_FREEC_BAF" in config:
-	config["template_FREEC_BAF"] = "data/config_template_FREEC_BAF.txt"
+if "path_BAM_RNA" in df_samplesheet.columns:
+	for sample in df_samplesheet.index:
+		if df_samplesheet.loc[sample,"path_BAM_RNA"]!="":
+			samples_RNA.append(sample)
 
 
 
 rule all:
 	input:
-		expand(config["output_dir"]+"/out/plots/chrplots_png/{sample}/{sample}_chr{chr}.png",sample=samples,chr=chromosomes),
-		expand(config["output_dir"]+"/out/SNV/mutect2/{sample}/{sample}.tsv",sample=samples)
+		expand(config["working_dir"]+"/out_nocontrol/plots/chrplots_png/{sample}/{sample}_chr{chr}.png",sample=samples_nocontrol,chr=chromosomes),
+		expand(config["working_dir"]+"/out_nocontrol/SNV/mutect2_genePanel/{sample}/{sample}.tsv",sample=samples_nocontrol),
+		expand(config["working_dir"]+"/out_control/plots/chrplots_png/{sample}/{sample}_chr{chr}.png",sample=samples_control,chr=chromosomes),
+		expand(config["working_dir"]+"/out_control/SNV/mutect2_wholegenome/{sample}/{sample}.tsv",sample=samples_control)
 
 
 
 
 # Filter the BAM files by removing reads which align to several locations
+def sample2bamfile(wcs):
+	sample = wcs["sample"]
+	if sample.endswith("control"):
+		sample = sample[:-8]
+		return df_samplesheet.loc[sample,"path_bam_control"]
+	else:
+		return df_samplesheet.loc[sample,"path_bam"]
+
+
 rule filter_BAM:
 	params:
 		threads="8",
 		runtime="20:00",
 		memory="2G"
 	input:
-		BAM = config["output_dir"]+"/BAM_unfiltered/{sample}.bam"
+		sample2bamfile
 	output:
-		BAM = config["output_dir"]+"/BAM/{sample}.bam",
-		BAM_i = config["output_dir"]+"/BAM/{sample}.bam.bai"
+		BAM = config["working_dir"]+"/BAM/{sample}.bam",
+		BAM_i = config["working_dir"]+"/BAM/{sample}.bam.bai"
 	shell:
 		"sambamba view -t 8 -F '[XA]==null and mapping_quality >35' {bam_path} -f bam -o {output.BAM}"
 
@@ -79,12 +93,12 @@ rule run_shatterseek:
 		runtime="40",
 		memory="16000"
 	input:
-		CNA=config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}.bam_ratio.txt",
-		SV=config["output_dir"]+"/out/SV/manta/{sample}/{sample}_SV_filtered.vcf"
+		CNA=config["working_dir"]+"/out/CNA/FREEC/{sample}/{sample}.bam_ratio.txt",
+		SV=config["working_dir"]+"/out/SV/manta/{sample}/{sample}_SV_filtered.vcf"
 	output:
-		CNA=config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}_shatterseekCNV",
-		SV=config["output_dir"]+"/out/SV/manta/{sample}/{sample}_shatterseekSV",
-		shatterseek=config["output_dir"]+"/out/chromothripsis/shatterseek/{sample}/{sample}_shatterseek.tsv"
+		CNA=config["working_dir"]+"/out/CNA/FREEC/{sample}/{sample}_shatterseekCNV",
+		SV=config["working_dir"]+"/out/SV/manta/{sample}/{sample}_shatterseekSV",
+		shatterseek=config["working_dir"]+"/out/chromothripsis/shatterseek/{sample}/{sample}_shatterseek.tsv"
 
 	conda:
 		"envs/WGS.yaml"
@@ -104,8 +118,8 @@ rule create_link_BAM:
 		runtime="20",
 		memory="1000"
 	output:
-		BAM = config["output_dir"]+"/BAM/{sample}.bam",
-		BAM_i = config["output_dir"]+"/BAM/{sample}.bam.bai"
+		BAM = config["working_dir"]+"/BAM/{sample}.bam",
+		BAM_i = config["working_dir"]+"/BAM/{sample}.bam.bai"
 	run:
 		bam_path = config["BAM_template"].replace("_SAMPLE_",wildcards.sample)
 		shell("ln -s {bam_path} {output.BAM}")
@@ -118,8 +132,8 @@ rule create_link_RNA:
 		runtime="20",
 		memory="1000"
 	output:
-		BAM = config["output_dir"]+"/BAM_RNA/{sample}.bam",
-		BAM_i = config["output_dir"]+"/BAM_RNA/{sample}.bam.bai"
+		BAM = config["working_dir"]+"/BAM_RNA/{sample}.bam",
+		BAM_i = config["working_dir"]+"/BAM_RNA/{sample}.bam.bai"
 	run:
 		bam_path = config["BAM_template_RNA"].replace("_SAMPLE_",wildcards.sample)
 		shell("ln -s {bam_path} {output.BAM}")
@@ -133,8 +147,8 @@ rule filter_BAM_template:
 		runtime="20:00",
 		memory="1000"
 	output:
-		BAM = config["output_dir"]+"/BAM/{sample}.bam",
-		BAM_i = config["output_dir"]+"/BAM/{sample}.bam.bai"
+		BAM = config["working_dir"]+"/BAM/{sample}.bam",
+		BAM_i = config["working_dir"]+"/BAM/{sample}.bam.bai"
 	run:
 		bam_path = config["BAM_template"].replace("_SAMPLE_",wildcards.sample)
 		shell("sambamba view -t 4 -F '[XA]==null and mapping_quality >35' {bam_path} -f bam -o {output.BAM}")

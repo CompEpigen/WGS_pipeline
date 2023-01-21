@@ -1,7 +1,6 @@
 # Sample information - This needs to be edited !!
-output_dir: /path/to/output_dir
-samples: [sample1,sample2]
-#metadata_file: /omics/groups/OE0219/internal/Etienne/WGS/pipeline/WGS/data/metadata_ckAML.tsv
+working_dir: /path/to/working_dir
+samplesheet: "samplesheet.csv"
 
 
 
@@ -12,11 +11,17 @@ manta_minPR: 5
 # Minimum number of split reads supporting a SV
 manta_minSR: 5
 # Minimum length of SVs
-manta_minLen: 40000
+manta_minLen_nocontrol: 40000
+manta_minLen_control: 200
 # (optional) Path to a Panel of Normal: bed file containing regions where SVs were identified in healthy samples.
 manta_pon : /omics/groups/OE0219/internal/Etienne/data/PoN/PoN_SV_1000G.bed
 # (optional) bed file containing regions of low mappability. 
-manta_mappability: /omics/groups/OE0219/internal/Etienne/data/mappability/mappability75.bed
+manta_mappability: /omics/groups/OE0219/internal/Etienne/data/mappability/mappability75.bedsample_sex[wcs.sample]
+
+# Control-FREEC
+template_FREEC_nocontrol: data/config_template_FREEC_nocontrol.txt
+template_FREEC_BAF_nocontrol: data/config_template_FREEC_BAF_nocontrol.txt
+template_FREEC_control: data/config_template_FREEC_control.txt
 
 
 

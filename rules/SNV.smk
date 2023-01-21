@@ -1,18 +1,18 @@
 
 
-rule run_mutect2:
+rule run_mutect2_genePanel:
 	params:
 		threads="6",
 		runtime="4:00",
 		memory="16000"
 	input:
-		BAM= config["output_dir"]+"/BAM/{sample}.bam"
+		BAM= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
-		unfiltered = config["output_dir"]+"/tmp/SNV/mutect2/{sample}/{sample}_unfiltered.vcf.gz",
-		filtertagged = config["output_dir"]+"/tmp/SNV/mutect2/{sample}/{sample}_filtertagged.vcf.gz",
-		filteredVCF = config["output_dir"]+"/tmp/SNV/mutect2/{sample}/{sample}_filtered.vcf.gz",
-		annotatedVCF_pop = config["output_dir"]+"/tmp/SNV/mutect2/{sample}/{sample}_annotatedPop.vcf.gz",
-		annotatedVCF_COSMIC = config["output_dir"]+"/tmp/SNV/mutect2/{sample}/{sample}_annotatedCOSMIC.vcf.gz"
+		unfiltered = config["working_dir"]+"/tmp/SNV/mutect2_genePanel/{sample}/{sample}_unfiltered.vcf.gz",
+		filtertagged = config["working_dir"]+"/tmp/SNV/mutect2_genePanel/{sample}/{sample}_filtertagged.vcf.gz",
+		filteredVCF = config["working_dir"]+"/tmp/SNV/mutect2_genePanel/{sample}/{sample}_filtered.vcf.gz",
+		annotatedVCF_pop = config["working_dir"]+"/tmp/SNV/mutect2_genePanel/{sample}/{sample}_annotatedPop.vcf.gz",
+		annotatedVCF_COSMIC = config["working_dir"]+"/tmp/SNV/mutect2_genePanel/{sample}/{sample}_annotatedCOSMIC.vcf.gz"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -28,15 +28,15 @@ rule run_mutect2:
 		"bcftools annotate -a {config[SNV_COSMIC]} -c ID {output.annotatedVCF_pop} -Oz -o {output.annotatedVCF_COSMIC}; "\
 		"bcftools index {output.annotatedVCF_COSMIC}; "
 
-rule postprocess_mutect2:
+rule postprocess_mutect2_genePanel:
 	params:
 		threads="6",
 		runtime="4:00",
 		memory="16000"
 	input:
-		annotatedVCF_COSMIC = config["output_dir"]+"/tmp/SNV/mutect2/{sample}/{sample}_annotatedCOSMIC.vcf.gz"
+		annotatedVCF_COSMIC = config["working_dir"]+"/tmp/SNV/mutect2_genePanel/{sample}/{sample}_annotatedCOSMIC.vcf.gz"
 	output:
-		filteredTSV = config["output_dir"]+"/out/SNV/mutect2/{sample}/{sample}.tsv"
+		filteredTSV = config["working_dir"]+"/out_nocontrol/SNV/mutect2_genePanel/{sample}/{sample}.tsv"
 	conda:
 		"../envs/WGS.yaml"
 
@@ -44,20 +44,20 @@ rule postprocess_mutect2:
 		"python scripts/postprocess_VCF.py -i {input.annotatedVCF_COSMIC} -o {output.filteredTSV}"
 
 
-rule run_mutect2_control:
+rule run_mutect2_genePanel_control:
 	params:
 		threads="6",
 		runtime="20:00",
 		memory="16000",
-		normal_samplename = lambda wcs: config["normal_samplename"][wcs.sample]
+		normal_samplename = lambda wcs: df_samplesheet.loc[wcs.sample,"control_samplename"]
 	input:
-		BAM_normal= config["output_dir"]+"/BAM/{sample}"+config["normal_suffix"]+".bam",
-		BAM_tumor= config["output_dir"]+"/BAM/{sample}"+config["tumor_suffix"]+".bam"
+		BAM_normal= config["working_dir"]+"/BAM/{sample}_control.bam",
+		BAM_tumor= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
-		unfiltered = config["output_dir"]+"/out/SNV/mutect2/{sample}/{sample}_unfiltered.vcf.gz",
-		filtertagged = config["output_dir"]+"/out/SNV/mutect2/{sample}/{sample}_filtertagged.vcf.gz",
-		filteredVCF = config["output_dir"]+"/out/SNV/mutect2/{sample}/{sample}_filtered.vcf",
-		filteredTSV = config["output_dir"]+"/out/SNV/mutect2/{sample}/{sample}.tsv"
+		unfiltered = config["working_dir"]+"/out/SNV/mutect2/{sample}/{sample}_unfiltered.vcf.gz",
+		filtertagged = config["working_dir"]+"/out/SNV/mutect2/{sample}/{sample}_filtertagged.vcf.gz",
+		filteredVCF = config["working_dir"]+"/out/SNV/mutect2/{sample}/{sample}_filtered.vcf",
+		filteredTSV = config["working_dir"]+"/out/SNV/mutect2/{sample}/{sample}.tsv"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -70,19 +70,19 @@ rule run_mutect2_control:
 		"python scripts/postprocess_VCF_control.py -i {output.filteredVCF} -o {output.filteredTSV}"
 
 
-rule run_mutect2_control_full:
+rule run_mutect2_control_wholegenome:
 	params:
 		threads="4",
 		runtime="46:00",
 		memory="8000",
-		normal_samplename = lambda wcs: config["normal_samplename"][wcs.sample]
+		normal_samplename = lambda wcs: df_samplesheet.loc[wcs.sample,"control_samplename"]
 	input:
-		BAM_normal= config["output_dir"]+"/BAM/{sample}"+config["normal_suffix"]+".bam",
-		BAM_tumor= config["output_dir"]+"/BAM/{sample}"+config["tumor_suffix"]+".bam"
+		BAM_normal= config["working_dir"]+"/BAM/{sample}_control.bam",
+		BAM_tumor= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
-		unfiltered = config["output_dir"]+"/out/SNV/mutect2_full/{sample}/{sample}_{chr}_unfiltered.vcf.gz",
-		filtertagged = config["output_dir"]+"/out/SNV/mutect2_full/{sample}/{sample}_{chr}_filtertagged.vcf.gz",
-		filteredVCF = config["output_dir"]+"/out/SNV/mutect2_full/{sample}/{sample}_{chr}_filtered.vcf.gz"
+		unfiltered = config["working_dir"]+"/tmp/SNV/mutect2_wholegenome/{sample}/{sample}_{chr}_unfiltered.vcf.gz",
+		filtertagged = config["working_dir"]+"/tmp/SNV/mutect2_wholegenome/{sample}/{sample}_{chr}_filtertagged.vcf.gz",
+		filteredVCF = config["working_dir"]+"/tmp/SNV/mutect2_wholegenome/{sample}/{sample}_{chr}_filtered.vcf.gz"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -95,16 +95,16 @@ rule run_mutect2_control_full:
 		"bcftools index {output.filteredVCF}"
 
 
-rule concat_mutect2_control_full:
+rule concat_mutect2_control_wholegenome:
 	params:
 		threads="1",
 		runtime="2:00",
 		memory="8000"
 	input:
-		expand(config["output_dir"]+"/out/SNV/mutect2_full/{{sample}}/{{sample}}_{chr}_filtered.vcf.gz",chr=chromosomes)
+		expand(config["working_dir"]+"/tmp/SNV/mutect2_wholegenome/{{sample}}/{{sample}}_{chr}_filtered.vcf.gz",chr=chromosomes)
 	output:
-		vcf = config["output_dir"]+"/out/SNV/mutect2_full/{sample}/{sample}.vcf.gz",
-		tsv = config["output_dir"]+"/out/SNV/mutect2_full/{sample}/{sample}.tsv"
+		vcf = config["working_dir"]+"/out_control/SNV/mutect2_wholegenome/{sample}/{sample}.vcf.gz",
+		tsv = config["working_dir"]+"/out_control/SNV/mutect2_wholegenome/{sample}/{sample}.tsv"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -119,9 +119,9 @@ rule run_freebayes_SNPs_chr:
 		runtime="46:00",
 		memory="8000"
 	input:
-		BAM= config["output_dir"]+"/BAM/{sample}.bam"
+		BAM= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
-		config["output_dir"]+"/tmp/SNV/freebayes_chr/{sample}/{sample}_{chr}.vcf.gz"
+		config["working_dir"]+"/tmp/SNV/freebayes_SNPs_chr/{sample}/{sample}_{chr}.vcf.gz"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -135,9 +135,9 @@ rule concat_freebayes_SNPs_chr:
 		runtime="4:00",
 		memory="8000"
 	input:
-		expand(config["output_dir"]+"/tmp/SNV/freebayes_chr/{{sample}}/{{sample}}_{chr}.vcf.gz",chr=chromosomes)
+		expand(config["working_dir"]+"/tmp/SNV/freebayes_SNPs_chr/{{sample}}/{{sample}}_{chr}.vcf.gz",chr=chromosomes)
 	output:
-		config["output_dir"]+"/out/SNV/freebayes/{sample}/{sample}.vcf.gz"
+		config["working_dir"]+"/out_nocontrol/SNV/freebayes_SNPs/{sample}/{sample}.vcf.gz"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -169,9 +169,9 @@ rule run_freebayes_SNPs:
 		runtime="16:00",
 		memory="16000"
 	input:
-		BAM= config["output_dir"]+"/BAM/{sample}.bam"
+		BAM= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
-		config["output_dir"]+"/out/SNV/freebayes/{sample}/{sample}.vcf.gz"
+		config["working_dir"]+"/out/SNV/freebayes/{sample}/{sample}.vcf.gz"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -185,11 +185,11 @@ rule run_freebayes_genelist:
 		runtime="3:00",
 		memory="6000"
 	input:
-		BAM= config["output_dir"]+"/BAM/{sample}.bam"
+		BAM= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
-		vcf=config["output_dir"]+"/out/SNV/freebayes_genelist/{sample}/{sample}.vcf",
-		annotatedVCF_pop = config["output_dir"]+"/tmp/SNV/freebayes_genelist/{sample}/{sample}_annotatedPop.vcf",
-		tsv=config["output_dir"]+"/out/SNV/freebayes_genelist/{sample}/{sample}.tsv"
+		vcf=config["working_dir"]+"/out_nocontrol/SNV/freebayes_genelist/{sample}/{sample}.vcf",
+		annotatedVCF_pop = config["working_dir"]+"/tmp/SNV/freebayes_genelist/{sample}/{sample}_annotatedPop.vcf",
+		tsv=config["working_dir"]+"/out_nocontrol/SNV/freebayes_genelist/{sample}/{sample}.tsv"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -206,11 +206,11 @@ rule run_freebayes_genes_chr:
 		runtime="3:00",
 		memory="6000"
 	input:
-		BAM= config["output_dir"]+"/BAM/{sample}.bam"
+		BAM= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
-		vcf=config["output_dir"]+"/tmp/SNV/freebayes_genes_chr/{sample}/{sample}_chr{chr}.vcf",
-		bed=config["output_dir"]+"/tmp/SNV/freebayes_genes_chr/{sample}/{sample}_chr{chr}.bed",
-		vcf_gz = config["output_dir"]+"/tmp/SNV/freebayes_genes_chr/{sample}/{sample}_chr{chr}.vcf.gz"
+		vcf=config["working_dir"]+"/tmp/SNV/freebayes_genes_chr/{sample}/{sample}_chr{chr}.vcf",
+		bed=config["working_dir"]+"/tmp/SNV/freebayes_genes_chr/{sample}/{sample}_chr{chr}.bed",
+		vcf_gz = config["working_dir"]+"/tmp/SNV/freebayes_genes_chr/{sample}/{sample}_chr{chr}.vcf.gz"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -227,9 +227,9 @@ rule split_vcf_chr:
 		runtime="3:00",
 		memory="6000"
 	input:
-		vcf_full= config["output_dir"]+"/out/SNV/germline_SNPs_all/{sample}.vcf"
+		vcf_full= config["working_dir"]+"/out/SNV/germline_SNPs_all/{sample}.vcf"
 	output:
-		bed=config["output_dir"]+"/tmp/SNV/freebayes_genes_chr/{sample}/{sample}_chr{chr}.bed",
+		bed=config["working_dir"]+"/tmp/SNV/freebayes_genes_chr/{sample}/{sample}_chr{chr}.bed",
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -241,10 +241,10 @@ rule run_freebayes_RNA:
 		runtime="23:00",
 		memory="6000"
 	input:
-		BAM= config["output_dir"]+"/BAM_RNA/{sample}.bam",
-		bed_DNA= config["output_dir"]+"/tmp/SNV/freebayes_genes_chr/{sample}/{sample}_chr{chr}.bed"
+		BAM= config["working_dir"]+"/BAM_RNA/{sample}.bam",
+		bed_DNA= config["working_dir"]+"/tmp/SNV/freebayes_genes_chr/{sample}/{sample}_chr{chr}.bed"
 	output:
-		config["output_dir"]+"/tmp/SNV/freebayes_RNA_chr/{sample}/{sample}_chr{chr}.vcf.gz"
+		config["working_dir"]+"/tmp/SNV/freebayes_RNA_chr/{sample}/{sample}_chr{chr}.vcf.gz"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -259,10 +259,10 @@ rule concat_freebayes_RNA_chr:
 		runtime="4:00",
 		memory="8000"
 	input:
-		expand(config["output_dir"]+"/tmp/SNV/freebayes_RNA_chr/{{sample}}/{{sample}}_chr{chr}.vcf.gz",chr=chromosomes_noY)
+		expand(config["working_dir"]+"/tmp/SNV/freebayes_RNA_chr/{{sample}}/{{sample}}_chr{chr}.vcf.gz",chr=chromosomes_noY)
 	output:
-		tmpout= config["output_dir"]+"/tmp/SNV/freebayes_RNA/{sample}/{sample}.vcf.gz",
-		annotated_out = config["output_dir"]+"/out/SNV/freebayes_RNA/{sample}/{sample}.vcf.gz"
+		tmpout= config["working_dir"]+"/tmp/SNV/freebayes_RNA/{sample}/{sample}.vcf.gz",
+		annotated_out = config["working_dir"]+"/out_nocontrol/SNV/freebayes_RNA/{sample}/{sample}.vcf.gz"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -277,10 +277,10 @@ rule concat_freebayes_genes_chr:
 		runtime="4:00",
 		memory="8000"
 	input:
-		expand(config["output_dir"]+"/tmp/SNV/freebayes_genes_chr/{{sample}}/{{sample}}_chr{chr}.vcf.gz",chr=chromosomes_noY)
+		expand(config["working_dir"]+"/tmp/SNV/freebayes_genes_chr/{{sample}}/{{sample}}_chr{chr}.vcf.gz",chr=chromosomes_noY)
 	output:
-		tmpout= config["output_dir"]+"/tmp/SNV/freebayes_genes/{sample}/{sample}.vcf.gz",
-		annotated_out = config["output_dir"]+"/out/SNV/freebayes_genes/{sample}/{sample}.vcf.gz"
+		tmpout= config["working_dir"]+"/tmp/SNV/freebayes_genes/{sample}/{sample}.vcf.gz",
+		annotated_out = config["working_dir"]+"/out_nocontrol/SNV/freebayes_genes/{sample}/{sample}.vcf.gz"
 	conda:
 		"../envs/WGS.yaml"
 	shell:

@@ -3,21 +3,21 @@ rule run_FREEC:
 		threads="8",
 		runtime="4:00",
 		memory="16000",
-		sex = lambda wcs: sample_sex[wcs.sample]
+		sex = lambda wcs: df_samplesheet.loc[wcs.sample,"sex"]
 	input:
-		BAM= config["output_dir"]+"/BAM/{sample}.bam"
+		BAM= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
-		ratios=config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}.bam_ratio.txt",
-		CNAs=config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}.bam_CNVs"
+		ratios=config["working_dir"]+"/out_nocontrol/CNA/FREEC/{sample}/{sample}.bam_ratio.txt",
+		CNAs=config["working_dir"]+"/out_nocontrol/CNA/FREEC/{sample}/{sample}.bam_CNVs"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
-		"cp {config[template_FREEC]} {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{chrLenFile}}#{config[chrLenFile]}#g' {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{outdir}}#{config[output_dir]}/out/CNA/FREEC/{wildcards.sample}#g' {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{BAMFILE}}#{input.BAM}#g' {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{SEX}}#{params.sex}#g' {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"{config[freec_bin]} -config {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt"
+		"cp {config[template_FREEC_nocontrol]} {config[working_dir]}/out_nocontrol/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{chrLenFile}}#{config[chrLenFile]}#g' {config[working_dir]}/out_nocontrol/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{outdir}}#{config[working_dir]}/out_nocontrol/CNA/FREEC/{wildcards.sample}#g' {config[working_dir]}/out_nocontrol/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{BAMFILE}}#{input.BAM}#g' {config[working_dir]}/out_nocontrol/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{SEX}}#{params.sex}#g' {config[working_dir]}/out_nocontrol/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"{config[freec_bin]} -config {config[working_dir]}/out_nocontrol/CNA/FREEC/{wildcards.sample}/config.txt"
 
 
 rule run_FREEC_BAF:
@@ -25,46 +25,46 @@ rule run_FREEC_BAF:
 		threads="8",
 		runtime="4:00",
 		memory="16000",
-		sex = lambda wcs: sample_sex[wcs.sample]
+		sex = lambda wcs: df_samplesheet.loc[wcs.sample,"sex"]
 	input:
-		BAM= config["output_dir"]+"/BAM/{sample}.bam"
+		BAM= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
-		ratios=config["output_dir"]+"/out/CNA/FREEC_BAF/{sample}/{sample}.bam_ratio.txt",
-		CNAs=config["output_dir"]+"/out/CNA/FREEC_BAF/{sample}/{sample}.bam_CNVs"
+		ratios=config["working_dir"]+"/out_nocontrol/CNA/FREEC_BAF/{sample}/{sample}.bam_ratio.txt",
+		CNAs=config["working_dir"]+"/out_ncontrol/CNA/FREEC_BAF/{sample}/{sample}.bam_CNVs"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
-		"cp {config[template_FREEC_BAF]} {config[output_dir]}/out/CNA/FREEC_BAF/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{chrLenFile}}#{config[chrLenFile]}#g' {config[output_dir]}/out/CNA/FREEC_BAF/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{outdir}}#{config[output_dir]}/out/CNA/FREEC_BAF/{wildcards.sample}#g' {config[output_dir]}/out/CNA/FREEC_BAF/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{BAMFILE}}#{input.BAM}#g' {config[output_dir]}/out/CNA/FREEC_BAF/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{SEX}}#{params.sex}#g' {config[output_dir]}/out/CNA/FREEC_BAF/{wildcards.sample}/config.txt;"\
-		"{config[freec_bin]} -config {config[output_dir]}/out/CNA/FREEC_BAF/{wildcards.sample}/config.txt"
+		"cp {config[template_FREEC_BAF_nocontrol]} {config[working_dir]}/out_nocontrol/CNA/FREEC_BAF/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{chrLenFile}}#{config[chrLenFile]}#g' {config[working_dir]}/out_nocontrol/CNA/FREEC_BAF/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{outdir}}#{config[working_dir]}/out_nocontrol/CNA/FREEC_BAF/{wildcards.sample}#g' {config[working_dir]}/out_nocontrol/CNA/FREEC_BAF/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{BAMFILE}}#{input.BAM}#g' {config[working_dir]}/out_nocontrol/CNA/FREEC_BAF/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{SEX}}#{params.sex}#g' {config[working_dir]}/out_nocontrol/CNA/FREEC_BAF/{wildcards.sample}/config.txt;"\
+		"{config[freec_bin]} -config {config[working_dir]}/out_nocontrol/CNA/FREEC_BAF/{wildcards.sample}/config.txt"
 
 rule run_FREEC_control:
 	params:
 		threads="8",
 		runtime="4:00",
 		memory="16000",
-		sex = lambda wcs: sample_sex[wcs.sample]
+		sex = lambda wcs: df_samplesheet.loc[wcs.sample,"sex"]
 	input:
-		BAM_normal= config["output_dir"]+"/BAM/{sample}"+config["normal_suffix"]+".bam",
-		BAM_tumor= config["output_dir"]+"/BAM/{sample}"+config["tumor_suffix"]+".bam"
+		BAM_normal= config["working_dir"]+"/BAM/{sample}_control.bam",
+		BAM_tumor= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
-		ratios=config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}.bam_ratio.txt",
-		CNAs=config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}.bam_CNVs"
+		ratios=config["working_dir"]+"/out_control/CNA/FREEC/{sample}/{sample}.bam_ratio.txt",
+		CNAs=config["working_dir"]+"/out_control/CNA/FREEC/{sample}/{sample}.bam_CNVs"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
-		"cp {config[template_FREEC]} {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{chrLenFile}}#{config[chrLenFile]}#g' {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{outdir}}#{config[output_dir]}/out/CNA/FREEC/{wildcards.sample}#g' {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{BAMFILE_NORMAL}}#{input.BAM_normal}#g' {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{BAMFILE_TUMOR}}#{input.BAM_tumor}#g' {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"sed -i 's#{{SEX}}#{params.sex}#g' {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"{config[freec_bin]} -config {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"cp {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/{wildcards.sample}{config[tumor_suffix]}.bam_ratio.txt {output.ratios}; "\
-		"cp {config[output_dir]}/out/CNA/FREEC/{wildcards.sample}/{wildcards.sample}{config[tumor_suffix]}.bam_CNVs {output.CNAs}; "\
+		"cp {config[template_FREEC_control]} {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{chrLenFile}}#{config[chrLenFile]}#g' {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{outdir}}#{config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}#g' {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{BAMFILE_NORMAL}}#{input.BAM_normal}#g' {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{BAMFILE_TUMOR}}#{input.BAM_tumor}#g' {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"sed -i 's#{{SEX}}#{params.sex}#g' {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"{config[freec_bin]} -config {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"\
+		"cp {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/{wildcards.sample}{config[tumor_suffix]}.bam_ratio.txt {output.ratios}; "\
+		"cp {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/{wildcards.sample}{config[tumor_suffix]}.bam_CNVs {output.CNAs}; "\
 
 rule create_vizualization_datafiles_FREEC:
 	params:
@@ -72,11 +72,11 @@ rule create_vizualization_datafiles_FREEC:
 		runtime="40",
 		memory="8000"
 	input:
-		ratios = config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}.bam_ratio.txt",
-		CNAs = config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}.bam_CNVs",
+		ratios = config["working_dir"]+"/{out}/CNA/FREEC/{sample}/{sample}.bam_ratio.txt",
+		CNAs = config["working_dir"]+"/{out}/CNA/FREEC/{sample}/{sample}.bam_CNVs",
 	output:
-		circos = config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}_CNA_circos.txt",
-		chrplot = config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}_CNA_chrplots.tsv"
+		circos = config["working_dir"]+"/{out}/CNA/FREEC/{sample}/{sample}_CNA_circos.txt",
+		chrplot = config["working_dir"]+"/{out}/CNA/FREEC/{sample}/{sample}_CNA_chrplots.tsv"
 	conda:
 		"../envs/WGS.yaml"
 	shell:
@@ -89,9 +89,9 @@ rule FREEC_to_shatterseek:
 		runtime="20",
 		memory="8000"
 	input:
-		config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}.bam_ratio.txt"
+		config["working_dir"]+"/{out}/CNA/FREEC/{sample}/{sample}.bam_ratio.txt"
 	output:
-		config["output_dir"]+"/out/CNA/FREEC/{sample}/{sample}_shatterseekCNA.tsv"
+		config["working_dir"]+"/{out}/CNA/FREEC/{sample}/{sample}_shatterseekCNA.tsv"
 
 	conda:
 		"../envs/WGS.yaml"
