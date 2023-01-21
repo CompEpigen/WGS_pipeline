@@ -1,0 +1,25 @@
+[general]
+
+ploidy = 2
+window = 10000
+minCNAlength = 2
+chrLenFile = {chrLenFile}
+outputDir = {outdir}
+#gemMappabilityFile = /omics/groups/OE0219/internal/Etienne/data/mappability/out100m2_hg19.gem
+maxThreads = 8
+contaminationAdjustment = TRUE
+GCcontentProfile = data/GC_profile_FREEC_PoN-1000G.cnp
+sex = XX ##
+#sambamba = sambamba
+
+[sample]
+
+mateFile = {BAMFILE}
+inputFormat = BAM
+mateOrientation = FR
+
+[BAF]
+makePileup = /omics/groups/OE0219/internal/Etienne/data/germline_variants/FREEC/gnomadSNP001.bed               
+fastaFile = /omics/groups/OE0219/internal/Etienne/data/reference/hs37d5_PhiX.fa                          
+SNPfile = /omics/groups/OE0219/internal/Etienne/data/germline_variants/FREEC/gnomadSNP001.txt                  
+minimalCoveragePerPosition=15

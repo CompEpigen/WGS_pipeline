@@ -1,6 +1,8 @@
 # Sample information - This needs to be edited !!
 working_dir: /path/to/working_dir
-samplesheet: "samplesheet.csv"
+samplesheet: samplesheet.csv
+
+use_control: true
 
 
 

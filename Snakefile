@@ -50,8 +50,10 @@ if "path_BAM_RNA" in df_samplesheet.columns:
 rule all:
 	input:
 		expand(config["working_dir"]+"/out_nocontrol/plots/chrplots_png/{sample}/{sample}_chr{chr}.png",sample=samples_nocontrol,chr=chromosomes),
+		expand(config["working_dir"]+"/out_nocontrol/plots/circos/circos_{sample}.svg",sample=samples_nocontrol),
 		expand(config["working_dir"]+"/out_nocontrol/SNV/mutect2_genePanel/{sample}/{sample}.tsv",sample=samples_nocontrol),
 		expand(config["working_dir"]+"/out_control/plots/chrplots_png/{sample}/{sample}_chr{chr}.png",sample=samples_control,chr=chromosomes),
+		expand(config["working_dir"]+"/out_control/plots/circos/circos_{sample}.svg",sample=samples_control),
 		expand(config["working_dir"]+"/out_control/SNV/mutect2_wholegenome/{sample}/{sample}.tsv",sample=samples_control)
 
 
@@ -78,7 +80,7 @@ rule filter_BAM:
 		BAM = config["working_dir"]+"/BAM/{sample}.bam",
 		BAM_i = config["working_dir"]+"/BAM/{sample}.bam.bai"
 	shell:
-		"sambamba view -t 8 -F '[XA]==null and mapping_quality >35' {bam_path} -f bam -o {output.BAM}"
+		"sambamba view -t 8 -F '[XA]==null and mapping_quality >35' {input} -f bam -o {output.BAM}"
 
 
 include: "rules/FREEC.smk"

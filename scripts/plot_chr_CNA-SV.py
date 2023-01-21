@@ -10,7 +10,7 @@ from matplotlib import gridspec
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--cnv', type = str, help='Copy number file')
+parser.add_argument('--cna', type = str, help='Copy number file')
 parser.add_argument('--sv', type = str, help='SV file')
 parser.add_argument('--foldback', type = str, help='tsv file containing foldback inversions (format: chr pos orientation)')
 parser.add_argument('--sample', type = str, help='sample name')
@@ -39,7 +39,7 @@ def chr_to_int(chr):
 matplotlib.rcParams.update({'font.size': 20})
 matplotlib.rcParams['font.sans-serif'] = "helvetica"
 matplotlib.rcParams['font.family'] = "sans-serif"
-df_CNV = pd.read_csv(args.cnv,sep="\t",header=None,names=["chr","start","end","ratio","color"],dtype={"chr":str})
+df_CNA = pd.read_csv(args.cna,sep="\t",header=None,names=["chr","start","end","ratio","color"],dtype={"chr":str})
 df_SV = pd.read_csv(args.sv,sep="\t",header=0,dtype={"chr":str})
 if use_foldbacks:
     df_foldback = pd.read_csv(args.foldback,sep="\t",header=None,names=["chr","pos","orientation"],dtype={"chr":str})
@@ -52,7 +52,7 @@ else:
     open(args.o+"_chrY."+args.format,"w").close() # create empty chrY file so that the pipeline knows that all output files are there.
 
 for chr in chromosomes:
-    df_CNV_chr = df_CNV.loc[df_CNV["chr"]==chr,:]
+    df_CNA_chr = df_CNA.loc[df_CNA["chr"]==chr,:]
     df_SV_chr = df_SV.loc[df_SV["chr"]==chr,:]
     df_SV_chr.reset_index(inplace=True)
     if use_foldbacks:
@@ -66,9 +66,9 @@ for chr in chromosomes:
     ax.append(fig.add_subplot(spec[0]))
     ax.append(fig.add_subplot(spec[1]))
 
-    ymax = np.max([2.2,np.max(df_CNV_chr["ratio"])*2*1.1])
-    ymin = np.min([1.2,np.min(df_CNV_chr["ratio"])*2*0.9])
-    xmax = np.max(df_CNV_chr["end"])*1.02
+    ymax = np.max([2.2,np.max(df_CNA_chr["ratio"])*2*1.1])
+    ymin = np.min([1.2,np.min(df_CNA_chr["ratio"])*2*0.9])
+    xmax = np.max(df_CNA_chr["end"])*1.02
     print(xmax)
     
 
@@ -91,7 +91,7 @@ for chr in chromosomes:
 
 
 
-    chr_length = np.max(df_CNV_chr["end"])
+    chr_length = np.max(df_CNA_chr["end"])
     if chr_length>120000000:
         ax[1].xaxis.set_major_locator(plt.MultipleLocator(20000000))
         ax[1].xaxis.set_minor_locator(plt.MultipleLocator(2000000))
@@ -116,8 +116,8 @@ for chr in chromosomes:
     ax[1].ticklabel_format(axis="x", style="sci", scilimits=(6,6))
     ax[1].xaxis.set_major_formatter(plt.FuncFormatter(format_func))
 
-    # CNV plot
-    ax[1].scatter(df_CNV_chr["start"],2*df_CNV_chr["ratio"],c=df_CNV_chr["color"],s=2.0,marker="o")
+    # CNA plot
+    ax[1].scatter(df_CNA_chr["start"],2*df_CNA_chr["ratio"],c=df_CNA_chr["color"],s=2.0,marker="o")
 
 
     # SV 

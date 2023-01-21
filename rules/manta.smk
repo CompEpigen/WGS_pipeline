@@ -65,7 +65,7 @@ rule postprocess_manta_control:
 		memory="16000"
 	input:
 		VCF = config["working_dir"]+"/out_control/SV/manta/{sample}/{sample}_SV_somatic.vcf",
-		BAM = config["working_dir"]+"/BAM/{sample}"+config["tumor_suffix"]+".bam"
+		BAM = config["working_dir"]+"/BAM/{sample}.bam"
 	output:
 		config["working_dir"]+"/out_control/SV/manta/{sample}/{sample}_SV_filtered.vcf"
 	conda:
