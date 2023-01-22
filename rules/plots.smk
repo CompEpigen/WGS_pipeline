@@ -4,7 +4,7 @@ rule make_chrplots:
 		runtime="4:00",
 		memory="16000",
 		sex = lambda wcs: df_samplesheet.loc[wcs.sample,"sex"]
-    conda:
+	conda:
 		"../envs/WGS.yaml"
 	input:
 		CNA = config["working_dir"]+"/{out}/CNA/FREEC/{sample}/{sample}_CNA_chrplots.tsv",
@@ -14,14 +14,13 @@ rule make_chrplots:
 	shell:
 		"python scripts/plot_chr_CNA-SV.py --cna {input.CNA} --sv {input.SV} --sample {wildcards.sample} --sex {params.sex} -o {config[working_dir]}/{wildcards.out}/plots/chrplots_{wildcards.format}/{wildcards.sample}/{wildcards.sample} --format {wildcards.format}"
 
-
 rule make_circosplots:
 	params:
 		threads="1",
 		runtime="4:00",
 		memory="16000",
 		sex = lambda wcs: df_samplesheet.loc[wcs.sample,"sex"]
-    conda:
+	conda:
 		"../envs/WGS.yaml"
 	input:
 		CNA = config["working_dir"]+"/{out}/CNA/FREEC/{sample}/{sample}_CNA_chrplots.tsv",
