@@ -54,10 +54,10 @@ rule run_mutect2_genePanel_control:
 		BAM_normal= config["working_dir"]+"/BAM/{sample}_control.bam",
 		BAM_tumor= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
-		unfiltered = config["working_dir"]+"/out/SNV/mutect2/{sample}/{sample}_unfiltered.vcf.gz",
-		filtertagged = config["working_dir"]+"/out/SNV/mutect2/{sample}/{sample}_filtertagged.vcf.gz",
-		filteredVCF = config["working_dir"]+"/out/SNV/mutect2/{sample}/{sample}_filtered.vcf",
-		filteredTSV = config["working_dir"]+"/out/SNV/mutect2/{sample}/{sample}.tsv"
+		unfiltered = config["working_dir"]+"/out_control/SNV/mutect2_genePanel/{sample}/{sample}_unfiltered.vcf.gz",
+		filtertagged = config["working_dir"]+"/out_control/SNV/mutect2_genePanel/{sample}/{sample}_filtertagged.vcf.gz",
+		filteredVCF = config["working_dir"]+"/out_control/SNV/mutect2_genePanel/{sample}/{sample}_filtered.vcf",
+		filteredTSV = config["working_dir"]+"/out_control/SNV/mutect2_genePanel/{sample}/{sample}.tsv"
 	conda:
 		"../envs/WGS.yaml"
 	shell:

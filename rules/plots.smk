@@ -29,4 +29,4 @@ rule make_circosplots:
 	output:
 		config["working_dir"]+"/{out}/plots/circos/circos_{sample}.svg"
 	shell:
-		"python scripts/plot_circos.py --cna {input.CNA} --sv {input.SV} --sex {params.sex} -o {output}"
+		"python scripts/plot_circos.py --cna {input.CNA} --sv {input.SV} --sex {params.sex} --data data -o {output}"

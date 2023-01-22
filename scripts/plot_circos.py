@@ -10,14 +10,14 @@ Gcircle = pycircos.Gcircle
 parser = argparse.ArgumentParser()
 parser.add_argument('--cna', type = str, help='Copy number file')
 parser.add_argument('--sv', type = str, help='SV file')
-parser.add_argument('--sample', type = str, help='sample name')
+parser.add_argument('--data', type = str, help='Data dir')
 parser.add_argument('--sex', type = str,default="XX", help='Sex: XX or XY')
 parser.add_argument('-o', type = str, help='Output file')
 args = parser.parse_args()
 
 
 
-data_dir = "data"
+data_dir = args.data
 
 #Set chromosomes
 circle = Gcircle() 
@@ -32,7 +32,7 @@ with open(data_dir+"/circos_chromosome_general.csv") as f:
         arc    = Garc(arc_id=name, size=length, interspace=1, raxis_range=(750,800), labelposition=60, label_visible=True) # ,facecolor="white"
         circle.add_garc(arc) 
 
-circle.set_garcs(00,352) 
+circle.set_garcs(00,353) 
 
 
 #cytoband
@@ -71,6 +71,7 @@ with open(args.cna,"r") as f:
     nskipped=0
     groupsize=0
     last_color="no"
+    last_value=-1
     last_name="-1"
     for line in f:
         line  = line.rstrip().split("\t")
@@ -79,29 +80,31 @@ with open(args.cna,"r") as f:
         end   = int(line[2]) 
         mid   = (start+end)/2
         if args.sex =="XY" and name in ["chrX","chrY"]:
-            value = min(float(line[3]),3.5)
+            value = min(float(line[3]),3.9)
         else:
-            value = min(float(line[3])*2,3.5)
+            value = min(float(line[3])*2,3.9)
         values_all.append(value)
         color = line[-1].rstrip("\n") 
         if name not in arcdata_dict:
             arcdata_dict[name]["positions"] = []
             arcdata_dict[name]["values"] = []
             arcdata_dict[name]["colors"] = []
-        if last_name ==last_name and last_color ==color and groupsize>10 and nskipped<=20: # skip some points, when a large group is similar...
+        same_as_last = abs(last_value-value) < 0.5 and value > 0.5 and value < 5 and last_name ==last_name and last_color ==color
+        if same_as_last and groupsize>3 and nskipped<=20: # skip some points, when a large group is similar...
             nskipped+=1
             groupsize+=1
         else:
             arcdata_dict[name]["positions"].append(mid) 
             arcdata_dict[name]["values"].append(value)
             arcdata_dict[name]["colors"].append(color_map[color])
-            if last_name ==name and last_color==color:
+            if same_as_last:
                 groupsize+=1
                 nskipped=0
             else:
                 groupsize=0
             last_name=name
             last_color=color
+            last_value = value
     
 vmin, vmax = min(values_all), max(values_all) 
 vmin2=vmin-0.05*abs(vmin)
@@ -131,7 +134,7 @@ with open(args.sv,"r") as f:
         color = line[-1].split(",")[0].split("=")[-1]
         source = (name1, start1, end1, 500)
         destination = (name2, start2, end2, 500)
-        circle.chord_plot(source, destination, edgecolor=color_map[color],linewidth=0.3)
+        circle.chord_plot(source, destination, edgecolor=color_map[color],linewidth=0.5)
 
 
 circle.figure
@@ -150,7 +153,7 @@ def offset(theta,r,wx,wy):
     x,y=pol2cart(r,theta)
     return cart2pol(x+wx,y+wy)
 
-
+"""
 theta1= 0
 r1=500+240*(0.87-vmin2)/(vmax2-vmin2)
 theta1,r1 = offset(theta1,r1,-0,-85)
@@ -164,5 +167,26 @@ theta3,r3 = offset(theta3,r3,0,-85)
 plt.text(theta1,r1,"CN=1",rotation=0,fontsize=8)
 plt.text(theta2,r2,"CN=2",rotation=0,fontsize=8)
 plt.text(theta3,r3,"CN=3",rotation=0,fontsize=8)
+
+"""
+
+theta1= 0
+r1=500+240*(0.87-vmin2)/(vmax2-vmin2)
+theta1,r1 = offset(theta1,r1,-0,-25)
+theta2= 0
+r2=500+240*(1.87-vmin2)/(vmax2-vmin2)
+theta2,r2 = offset(theta2,r2,-0,-25)
+theta3= 0
+r3=500+240*(2.87-vmin2)/(vmax2-vmin2)
+theta3,r3 = offset(theta3,r3,0,-25)
+
+theta= 0
+r=500+240*0.106
+theta,r = offset(theta,r,0,-60)
+
+plt.text(theta1,r1,"1",rotation=0,fontsize=9)
+plt.text(theta2,r2,"2",rotation=0,fontsize=9)
+plt.text(theta3,r3,"3",rotation=0,fontsize=9)
+plt.text(theta,r,"Copy number",rotation=90,fontsize=9)
 
 plt.savefig(args.o)

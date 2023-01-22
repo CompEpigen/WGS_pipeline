@@ -62,9 +62,7 @@ rule run_FREEC_control:
 		"sed -i 's#{{BAMFILE_NORMAL}}#{input.BAM_normal}#g' {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"\
 		"sed -i 's#{{BAMFILE_TUMOR}}#{input.BAM_tumor}#g' {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"\
 		"sed -i 's#{{SEX}}#{params.sex}#g' {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"{config[freec_bin]} -config {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"\
-		"cp {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/{wildcards.sample}.bam_ratio.txt {output.ratios}; "\
-		"cp {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/{wildcards.sample}.bam_CNVs {output.CNAs}; "\
+		"{config[freec_bin]} -config {config[working_dir]}/out_control/CNA/FREEC/{wildcards.sample}/config.txt;"
 
 rule create_vizualization_datafiles_FREEC:
 	params:
