@@ -16,9 +16,9 @@ manta_minSR: 5
 manta_minLen_nocontrol: 40000
 manta_minLen_control: 200
 # (optional) Path to a Panel of Normal: bed file containing regions where SVs were identified in healthy samples.
-manta_pon : /omics/groups/OE0219/internal/Etienne/data/PoN/PoN_SV_1000G.bed
+manta_pon : data/PoN_SV_1000G.bed
 # (optional) bed file containing regions of low mappability. 
-manta_mappability: /omics/groups/OE0219/internal/Etienne/data/mappability/mappability75.bedsample_sex[wcs.sample]
+manta_mappability: /omics/groups/OE0219/internal/Etienne/data/mappability/mappability75.bed
 
 # Control-FREEC
 template_FREEC_nocontrol: data/config_template_FREEC_nocontrol.txt
