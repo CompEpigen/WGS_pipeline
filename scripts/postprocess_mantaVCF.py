@@ -23,6 +23,7 @@ parser.add_argument('--minLen', type = int,default=20000, help='Minimum SV lengt
 parser.add_argument('--bam', type = str, help='BAM file (used to compute local coverage, to confirm/refute deletions and duplications)')
 parser.add_argument('--mappability', type = str, help='bed file containing the regions with low mappability')
 parser.add_argument('--tumorindex', type = int,default=0, help='Index of the tumor sample (0 if only the tumor sample was provided, 1 if a control was used).')
+parser.add_argument('--keepCloseSV', type = int,default=0, help='If set to 1, will not filter out two SVs whose breakpoints are close to each other (could be reciprocal translocation)')
 args = parser.parse_args()
 
 
@@ -187,19 +188,6 @@ else:
 # END COVERAGE
 ####################################################
 
-# MAPPABILITY
-# Go through the mappability file to see which of the breakends are in low mappability regions
-breakend_low_mappability={}
-if args.mappability is not None:
-    print("Mappability file was provided.")
-    file_mappability = open(args.mappability,"r")
-    for breakend in positions:
-        breakend_low_mappability[breakend] = locus_in_bedRegion(file_mappability,breakend[0],breakend[1])
-    file_mappability.close()
-else:
-    print("Mappability file was not provided.")
-    for breakend in positions:
-        breakend_low_mappability[breakend] = False
 
 def get_breakpoint_info(record):
     chr = record.CHROM
@@ -226,37 +214,141 @@ def get_breakpoint_info(record):
 def region_contains_genes(chr,start,end):
     return len(ensembl_grch37.genes_at_locus(chr,start,end))>0
 
+def low_mapq_in_region(samfile,chr,start,end,mapq_threshold=45):
+    count_lowmapq=0
+    count_highmapq=0
+    for read in samfile.fetch(chr,start,end):
+        if read.mapq<mapq_threshold:
+            count_lowmapq+=1
+        else:
+            count_highmapq+=1
+    return count_lowmapq/(count_lowmapq+count_highmapq) >=0.15
+
+def SV_explained_by_alternative_alignments(samfile,chr1,pos1,chr2,pos2):
+    # Find reads supporting the alignment
+    count_reads_supportingSV=0
+    count_reads_supportingSV_withXA=0
+    for read in samfile.fetch(chr1, pos1-200, pos2+200):
+        # Check for split-read (supplementary alignment)
+        SA_chr=""
+        for t in read.tags:
+            if t[0]=="SA":
+                for s in t[1][:-1].split(";"):
+                    s_split = s.split(",")
+                    s_chr = s_split[0]
+                    s_start = int(s_split[1])
+                    if (s_chr==chr2 and abs(pos2-s_start)<200):
+                        SA_chr=s_chr
+                        SA_start = s_start
+        # Check for read pair supporting the SV
+        read_pair_SV = read.next_reference_name==chr2 and abs(read.next_reference_start-pos2)<200
+
+        if SA_chr!="" or read_pair_SV: # The read supports the SV
+            count_reads_supportingSV+=1
+            for t in read.tags:
+                if t[0]=="XA":
+                    count_reads_supportingSV_withXA+=1
+
+    print("Reads supporting SV: " +str(count_reads_supportingSV)+"; with XA: "+str(count_reads_supportingSV_withXA))
+    return False
+
+def reads_go_through_insertion(samfile,chr1,pos1,chr2,pos2):
+    """Look for read pairs which go through an insertion"""
+    count_insertions=0
+    for read in samfile.fetch(chr1,pos1-400,pos1+400):
+        if readpair_goes_through_insertion(read,chr1,pos1,chr2,pos2,1000):
+            count_insertions+=1
+    if count_insertions>0:
+        print("Insertion count: "+ str(count_insertions))
+    return count_insertions>0
+
+
+def readpair_goes_through_insertion(read,chr1,pos1,chr2,pos2,window_size=1000):
+    """Look for a read pair where both main alignments are in the same region, but there is a supplementary alignment in between which maps to the other region."""
+    has_SA=False
+    for t in read.tags:
+        if t[0]=="SA":
+            for s in t[1][:-1].split(";"):
+                s_split = s.split(",")
+                s_chr = s_split[0]
+                s_start = int(s_split[1])
+                if (s_chr==chr1 and abs(pos1-s_start)<window_size) or (s_chr==chr2 and abs(s_start-pos2) < window_size):
+                    SA_chr=s_chr
+                    SA_start = s_start
+                    has_SA=True
+    if not has_SA: return False
+
+    # Check that both read pairs map to the same region
+    if read.next_reference_name != read.reference_name or abs(read.next_reference_start-read.reference_start)>window_size: return False
+
+    # Check that the supplementary alignment is between the main alignment and the mate
+    if read.cigarstring.find("S")>0: charS="S"
+    if read.cigarstring.find("H")>0: charS="H"
+    if read.is_reverse:
+        sup_alignment_middle = read.cigarstring.find(charS) < read.cigarstring.find("M")
+    else:
+        sup_alignment_middle = read.cigarstring.find(charS) > read.cigarstring.find("M")
+    if not sup_alignment_middle: return False
+
+    # Check that the main alignment maps to one of the 2 regions and that the supplementary alignment maps to the other region
+    if read.reference_name==chr1 and abs(read.reference_start-pos1)<window_size:
+        if SA_chr==chr2 and abs(SA_start-pos2)<window_size:
+            return True
+    elif read.reference_name==chr2 and abs(read.reference_start-pos2)<window_size:
+        if SA_chr==chr1 and abs(SA_start-pos1)<window_size:
+            return True
+
+    return False
+
+#########################################################
+
     
 
 # Write the filtered VCF
 reader = vcfpy.Reader.from_path(args.i)
 header = reader.header
-header.add_filter_line({"ID":"MAPPABILITY","Description":"Regions with low mappability close to the breakpoint."})
+#header.add_filter_line({"ID":"MAPPABILITY","Description":"Regions with low mappability close to the breakpoint."})
 writer = vcfpy.Writer.from_path(args.o,reader.header)
 for record in reader:
     print("-----------")
     print(record)
     ( (chr,pos,orientation) , (chr2,pos2,orientation2) ) = get_breakpoint_info(record)
 
-    one_breakend_filtered = pos_is_filtered[(chr,pos)] or pos_is_filtered[(chr2,pos2)]
-
+   
+    # Filter based on minimum number of supporting reads
     if (not "PR" in record.calls[args.tumorindex].data) or (not "SR" in record.calls[args.tumorindex].data):
         filtered_n_reads=True
     else:
         filtered_n_reads = (record.calls[args.tumorindex].data["PR"][1] < args.minPR) or (record.calls[args.tumorindex].data["SR"][1] < args.minSR)
+        # Somatic SVs (and heterozygous): expect some reads which do not support the SV.
         filtered_n_reads = filtered_n_reads or (record.calls[args.tumorindex].data["PR"][0] < 2) or (record.calls[args.tumorindex].data["SR"][1] < 2)
-    filtered_length = (chr==chr2) and ( abs(pos-pos2) < args.minLen)
-
     if filtered_n_reads:
         print("SV filtered due to insufficient number of supporting reads")
         continue
+
+    # Filter based on minimum SV length
+    filtered_length = (chr==chr2) and ( abs(pos-pos2) < args.minLen)
     if filtered_length:
         print("SV filtered due to short length")
         continue
+    # Filter based on Panel of Normal
+    one_breakend_filtered = pos_is_filtered[(chr,pos)] or pos_is_filtered[(chr2,pos2)]
     if one_breakend_filtered:
         print("SV filtered by Panel of Normal")
         continue
 
+    # Filter out SVs where many of the reads in the region have low MAPQ, since these regions are unreliable.
+    if low_mapq_in_region(samfile,chr,pos-100,pos+100,45) or low_mapq_in_region(samfile,chr2,pos2-100,pos2+100,45):
+        print("Filtered out because many of the reads near the breakpoint had a low MAPQ.")
+        continue
+
+    # Filter out reads with PolyA insertions, since they probably come from retrotransposons
+    if "sequence" in dir(record.ALT[0]) and len(record.ALT[0].sequence) > 8 and (record.ALT[0].sequence =="A"*len(record.ALT[0].sequence) or record.ALT[0].sequence =="T" * len(record.ALT[0].sequence)):
+        print("PolyA insertion: probably retrotransposon --> filter out")
+        continue 
+
+    # Check if deletions and duplications are validated by read depth, in which case we accept them directly. 
+    """
     if record.INFO["SVTYPE"] == "DEL" and global_coverage>=0:
         coverage_del = compute_coverage_region(samfile,chr,pos,pos2)
         if coverage_del < 0.75 * global_coverage:
@@ -277,24 +369,16 @@ for record in reader:
             print("Duplication not confirmed based on read depth") 
             # Consider as BND instead of duplication...
             record.ALT[0] = vcfpy.BreakEnd(mate_chrom=chr,mate_pos = pos2, orientation = orientation, mate_orientation=orientation2,sequence="",within_main_assembly=True)
-    
-    # Flag breakpoints close to low mappability region. 
-    if breakend_low_mappability[(chr,pos)] or breakend_low_mappability[(chr2,pos2)]:
-        print("Breakend in low-mappability region!")
-        record.FILTER = ["MAPPABILITY"]
-    else:
-        print("Breakend in high mappability region.")
+    """
 
     if region_contains_genes(chr,pos-10000,pos+10000) or region_contains_genes(chr,pos2-10000,pos2+10000):
         print("Breakpoint close to gene")
         #writer.write_record(record)
         #continue
-        
 
-    records_close = collect_SVs_close(chr,pos,window_size)
+    # See if a second SV can, combined with the first one, lead to a small insertion, which would then be filtered out.
     filter_out_record = False
-    print("Number of SVs close: " + str(len(records_close)))
-    for r in records_close:
+    for r in collect_SVs_close(chr,pos,window_size):
         print(r)
         ( (Bchr,Bpos,Borientation) , (Bchr2,Bpos2,Borientation2) ) = get_breakpoint_info(r)
         if Bchr2 ==chr2 and abs(pos2-Bpos2) < window_size:
@@ -312,11 +396,13 @@ for record in reader:
             else:
                 orientationOutward2 = (orientation2=="-")
                 BorientationOutward2 = (Borientation2=="+")
-
             
-            #TEMP: Do not filter out when two breakpoints are very close from each other
-            if abs(pos-Bpos)<200 and abs(pos2-Bpos2)<200: # 10
-                print("Two breakpoints very close to each other; could be reciprocal translocation.")
+            if abs(pos-Bpos)<100 and abs(pos2-Bpos2)<100: 
+                if reads_go_through_insertion(samfile,chr,pos,chr2,pos2):
+                    print("Small insertion, because some read pairs going through the whole insertion were detected")
+                    filter_out_record=True
+            elif abs(pos-Bpos)<1000 and abs(pos2-Bpos2)<1000 and args.keepCloseSV:
+                print("Close SVs") 
             elif (not orientationOutward) and (not BorientationOutward) and (not orientationOutward2) and (not BorientationOutward2):
                 if chr ==chr2:
                     print("Inversion") # TODO: inverted duplication ??
@@ -338,10 +424,6 @@ for record in reader:
         print("-")
 
     if filter_out_record: continue
-    print(record.ALT[0])
-    if "sequence" in dir(record.ALT[0]) and len(record.ALT[0].sequence) > 8 and (record.ALT[0].sequence =="A"*len(record.ALT[0].sequence) or record.ALT[0].sequence =="T" * len(record.ALT[0].sequence)):
-        print("PolyA insertion: probably retrotransposon --> filter out")
-        continue 
     
     print("Keep SV.")
     writer.write_record(record)

@@ -2,7 +2,7 @@ rule run_FREEC:
 	params:
 		threads="8",
 		runtime="4:00",
-		memory="16000",
+		memory="8000",
 		sex = lambda wcs: df_samplesheet.loc[wcs.sample,"sex"]
 	input:
 		BAM= config["working_dir"]+"/BAM/{sample}.bam"
@@ -24,7 +24,7 @@ rule run_FREEC_BAF:
 	params:
 		threads="8",
 		runtime="4:00",
-		memory="16000",
+		memory="8000",
 		sex = lambda wcs: df_samplesheet.loc[wcs.sample,"sex"]
 	input:
 		BAM= config["working_dir"]+"/BAM/{sample}.bam"
@@ -45,7 +45,7 @@ rule run_FREEC_control:
 	params:
 		threads="8",
 		runtime="4:00",
-		memory="16000",
+		memory="8000",
 		sex = lambda wcs: df_samplesheet.loc[wcs.sample,"sex"]
 	input:
 		BAM_normal= config["working_dir"]+"/BAM/{sample}_control.bam",
