@@ -368,6 +368,9 @@ def reads_go_through_insertion(samfile,chr1,pos1,chr2,pos2):
     for read in samfile.fetch(chr1,pos1-400,pos1+400):
         if readpair_goes_through_insertion(read,chr1,pos1,chr2,pos2,1000):
             count_insertions+=1
+    for read in samfile.fetch(chr2,pos2-400,pos2+400):
+        if readpair_goes_through_insertion(read,chr2,pos2,chr1,pos1,1000):
+            count_insertions+=1
     if count_insertions>0:
         print("Insertion count: "+ str(count_insertions))
     return count_insertions>0
@@ -495,7 +498,7 @@ for record in reader:
 
 
     # Filter out reads with PolyA insertions, since they probably come from retrotransposons
-    if "sequence" in dir(record.ALT[0]) and ("AAAAAAAAA" in record.ALT[0] or "TTTTTTTTT" in record.ALT[0]):
+    if "sequence" in dir(record.ALT[0]) and ("AAAAAAAAA" in record.ALT[0].sequence or "TTTTTTTTT" in record.ALT[0].sequence):
         print("PolyA insertion: probably retrotransposon --> filter out")
         continue 
 
@@ -560,14 +563,14 @@ for record in reader:
                     print("Inversion") # TODO: inverted duplication ??
                 else:
                     print("Reciprocal translocation")
-            elif orientationOutward and BorientationOutward and orientationOutward2 and BorientationOutward2:
-                # Insertion with TSD
+            elif orientationOutward and BorientationOutward and orientationOutward2 and BorientationOutward2 and ((abs(pos-Bpos)<=25 and abs(pos2-Bpos2)>130) or (abs(pos2-Bpos2)<=25 and abs(pos-Bpos))):
+                # Insertion with TSD. The duplicated part must be small, but the insertion large (otherwise we would have found a read going through the insertion.)
                 print("Small insertion with TSD ")
                 filter_out_record = True
                 continue
-            elif ( orientationOutward and BorientationOutward and (not orientationOutward2) and not (BorientationOutward2) ) \
-                or ( (not orientationOutward) and (not BorientationOutward) and orientationOutward2 and BorientationOutward2 ):
-                # Insertion from the first side into the second side, with a deletion at the insertion site.
+            elif ( orientationOutward and BorientationOutward and (not orientationOutward2) and not (BorientationOutward2) and abs(pos2-Bpos2)<=25 and abs(pos-Bpos)>130 ) \
+                or ( (not orientationOutward) and (not BorientationOutward) and orientationOutward2 and BorientationOutward2 and abs(pos-Bpos)<=25 and abs(pos2-Bpos2)>130):
+                # Insertion from the first side into the second side, with a deletion at the insertion site. The deletion must be <=25bp, and the insertion larger than 130bp, otherwise we would find reads going through the insertion
                 print("Small insertion, with a small deletion at the inserted site -")
                 filter_out_record = True
                 continue
