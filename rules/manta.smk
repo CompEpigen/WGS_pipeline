@@ -1,7 +1,7 @@
 rule run_manta_nocontrol:
 	params:
 		threads="8",
-		runtime="10:00",
+		runtime="20:00",
 		memory="16000"
 	input:
 		BAM= config["working_dir"]+"/BAM/{sample}.bam"
@@ -44,11 +44,12 @@ rule run_manta_control:
 rule postprocess_manta_nocontrol:
 	params:
 		threads="1",
-		runtime="5:45",
+		runtime="3:45",
 		memory="16000"
 	input:
 		VCF = config["working_dir"]+"/out_nocontrol/SV/manta/{sample}/{sample}_SV_unfiltered.vcf",
-		BAM = config["working_dir"]+"/BAM/{sample}.bam"
+		BAM = config["working_dir"]+"/BAM/{sample}.bam",
+		CNAs=config["working_dir"]+"/out_nocontrol/CNA/FREEC/{sample}/{sample}.bam_CNVs"
 	output:
 		config["working_dir"]+"/out_nocontrol/SV/manta/{sample}/{sample}_SV_filtered.vcf"
 	conda:
@@ -56,12 +57,12 @@ rule postprocess_manta_nocontrol:
 	shell:
 		"python scripts/postprocess_mantaVCF.py -i {input.VCF} -o {output} "\
 		"--minPR {config[manta_minPR]} --minSR {config[manta_minSR]} --minLen {config[manta_minLen_nocontrol]} "\
-		"--pon {config[manta_pon]} --bam {input.BAM} --mappability {config[manta_mappability]} "
+		"--pon {config[manta_pon]} --bam {input.BAM} --mappability {config[manta_mappability]} --cnv {input.CNAs} "
 
 rule postprocess_manta_control:
 	params:
 		threads="1",
-		runtime="5:45",
+		runtime="7:45",
 		memory="16000"
 	input:
 		VCF = config["working_dir"]+"/out_control/SV/manta/{sample}/{sample}_SV_somatic.vcf",

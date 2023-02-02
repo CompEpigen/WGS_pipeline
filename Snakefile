@@ -54,9 +54,8 @@ rule all:
 		expand(config["working_dir"]+"/out_nocontrol/SNV/mutect2_genePanel/{sample}/{sample}.tsv",sample=samples_nocontrol),
 		expand(config["working_dir"]+"/out_control/plots/chrplots_png/{sample}/{sample}_chr{chr}.png",sample=samples_control,chr=chromosomes),
 		expand(config["working_dir"]+"/out_control/plots/circos/circos_{sample}.svg",sample=samples_control),
-		expand(config["working_dir"]+"/out_control/SNV/mutect2_wholegenome/{sample}/{sample}.tsv",sample=samples_control)
-
-
+		expand(config["working_dir"]+"/out_control/SNV/mutect2_wholegenome/{sample}/{sample}.tsv",sample=samples_control),
+		expand(config["working_dir"]+"/out_control/SNV/freebayes_RNA/{sample}/{sample}.vcf.gz",sample=samples_control)
 
 
 # Filter the BAM files by removing reads which align to several locations
@@ -68,7 +67,7 @@ def sample2bamfile(wcs):
 	else:
 		return df_samplesheet.loc[sample,"path_bam"]
 
-
+"""
 rule filter_BAM:
 	params:
 		threads="8",
@@ -81,7 +80,7 @@ rule filter_BAM:
 		BAM_i = config["working_dir"]+"/BAM/{sample}.bam.bai"
 	shell:
 		"sambamba view -t 8 -F '[XA]==null and mapping_quality >35' {input} -f bam -o {output.BAM}"
-"""
+""""
 
 rule symlink_BAM:
 	params:
@@ -96,7 +95,24 @@ rule symlink_BAM:
 	shell:
 		"ln -s {input} {output.BAM}; ln -s {input}.bai {output.BAM_i}"
 
-"""
+
+def sample2bamfile_RNA(wcs):
+	return df_samplesheet.loc[wcs["sample"],"path_bam_RNA"]
+
+rule symmlink_BAM_RNA:
+	params:
+		threads="1",
+		runtime="20",
+		memory="1000"
+	input:
+		sample2bamfile_RNA
+	output:
+		BAM = config["working_dir"]+"/BAM_RNA/{sample}.bam",
+		BAM_i = config["working_dir"]+"/BAM_RNA/{sample}.bam.bai"
+	shell:
+		"ln -s {input} {output.BAM}; ln -s {input}.bai {output.BAM_i}"
+
+
 include: "rules/FREEC.smk"
 include: "rules/manta.smk"
 include: "rules/SNV.smk"
@@ -141,19 +157,6 @@ rule create_link_BAM:
 		shell("ln -s {bam_path} {output.BAM}")
 		shell("ln -s {bam_path}.bai {output.BAM_i}")
 """
-
-rule create_link_RNA:
-	params:
-		threads="1",
-		runtime="20",
-		memory="1000"
-	output:
-		BAM = config["working_dir"]+"/BAM_RNA/{sample}.bam",
-		BAM_i = config["working_dir"]+"/BAM_RNA/{sample}.bam.bai"
-	run:
-		bam_path = config["BAM_template_RNA"].replace("_SAMPLE_",wildcards.sample)
-		shell("ln -s {bam_path} {output.BAM}")
-		shell("ln -s {bam_path}.bai {output.BAM_i}")
 
 
 """

@@ -20,8 +20,9 @@ parser.add_argument('--pon', type = str, help='bed file containing regions to fi
 parser.add_argument('--minPR', type = int,default=0, help='Minimum number of paired reads supporting the SV')
 parser.add_argument('--minSR', type = int,default=0, help='Minimum number of split reads supporting the SV')
 parser.add_argument('--minLen', type = int,default=20000, help='Minimum SV length')
-parser.add_argument('--bam', type = str, help='BAM file (used to compute local coverage, to confirm/refute deletions and duplications)')
+parser.add_argument('--bam', type = str, help='BAM file (used to check the breakpoints')
 parser.add_argument('--mappability', type = str, help='bed file containing the regions with low mappability')
+parser.add_argument('--cnv', type = str, help='cnv file produced by control freec. Less stringent filters are used for SVs close to CNA borders.')
 parser.add_argument('--tumorindex', type = int,default=0, help='Index of the tumor sample (0 if only the tumor sample was provided, 1 if a control was used).')
 parser.add_argument('--keepCloseSV', type = int,default=0, help='If set to 1, will not filter out two SVs whose breakpoints are close to each other (could be reciprocal translocation)')
 args = parser.parse_args()
@@ -222,13 +223,30 @@ def low_mapq_in_region(samfile,chr,start,end,mapq_threshold=45):
             count_lowmapq+=1
         else:
             count_highmapq+=1
-    return count_lowmapq/(count_lowmapq+count_highmapq) >=0.15
+    print("low mapq in region " + str(count_lowmapq)+"; high "+str(count_highmapq))
+    if pos_close_to_CNA(chr,(start+end)/2):
+        return count_lowmapq/(count_lowmapq+count_highmapq) >=0.40
+    else:
+        return count_lowmapq/(count_lowmapq+count_highmapq) >=0.20
+
+def low_mapq_SV(samfile,chr,pos,chr2,pos2,min_reads,mapq_threshold=45):
+    count_supporting_highMAPQ=0
+    count_supporting_lowMAPQ=0
+    for read in samfile.fetch(chr,pos-200,pos+200):
+        if read.next_reference_name==chr2 and abs(read.next_reference_start-pos2)<1000:
+            if read.mapq<mapq_threshold:
+                count_supporting_lowMAPQ+=1
+            else:
+                count_supporting_highMAPQ+=1
+    print("Read supporting the SV: low mapq " + str(count_supporting_lowMAPQ)+"; high mapq " + str(count_supporting_highMAPQ))
+    return count_supporting_highMAPQ<min_reads or count_supporting_highMAPQ*2 < count_supporting_lowMAPQ
 
 def SV_explained_by_alternative_alignments(samfile,chr1,pos1,chr2,pos2):
     # Find reads supporting the alignment
     count_reads_supportingSV=0
     count_reads_supportingSV_withXA=0
-    for read in samfile.fetch(chr1, pos1-200, pos2+200):
+    
+    for read in samfile.fetch(chr1, pos1-200, pos1+200):
         # Check for split-read (supplementary alignment)
         SA_chr=""
         for t in read.tags:
@@ -237,11 +255,11 @@ def SV_explained_by_alternative_alignments(samfile,chr1,pos1,chr2,pos2):
                     s_split = s.split(",")
                     s_chr = s_split[0]
                     s_start = int(s_split[1])
-                    if (s_chr==chr2 and abs(pos2-s_start)<200):
+                    if (s_chr==chr2 and abs(pos2-s_start)<600):
                         SA_chr=s_chr
                         SA_start = s_start
         # Check for read pair supporting the SV
-        read_pair_SV = read.next_reference_name==chr2 and abs(read.next_reference_start-pos2)<200
+        read_pair_SV = read.next_reference_name==chr2 and abs(read.next_reference_start-pos2)<1000
 
         if SA_chr!="" or read_pair_SV: # The read supports the SV
             count_reads_supportingSV+=1
@@ -250,7 +268,99 @@ def SV_explained_by_alternative_alignments(samfile,chr1,pos1,chr2,pos2):
                     count_reads_supportingSV_withXA+=1
 
     print("Reads supporting SV: " +str(count_reads_supportingSV)+"; with XA: "+str(count_reads_supportingSV_withXA))
-    return False
+    return (count_reads_supportingSV_withXA>4*count_reads_supportingSV or (count_reads_supportingSV-count_reads_supportingSV_withXA)<args.minPR)
+
+
+def filter_min_SR_PR(samfile,chr1,pos1,chr2,pos2):
+    # Check that we have enough split reads and paired reads supporting the SV, ignoring those with low mapqual or with alternative alignments
+    reads_SR=set()
+    reads_PR=set()
+    reads_filtered=set()
+    
+    for read in samfile.fetch(chr1, pos1-200, pos1+200):
+        if read.is_supplementary: continue
+        has_XA=False
+        has_SA=False
+        for t in read.tags:
+                if t[0]=="XA": has_XA=True
+                elif t[0]=="SA": has_SA=True
+        if (has_XA and not has_SA) or (read.mapq<=35 and not has_SA) or read.mapq<=10:
+            reads_filtered.add(read.query_name)
+            continue
+        # Check for split-read (supplementary alignment)
+        has_correct_SA=False
+        for t in read.tags:
+            if t[0]=="SA":
+                for s in t[1][:-1].split(";"):
+                    s_split = s.split(",")
+                    s_chr = s_split[0]
+                    s_start = int(s_split[1])
+                    if (s_chr==chr2 and abs(pos2-s_start)<1000):
+                        reads_SR.add(read.query_name)
+                        has_correct_SA=True
+        # Check for read pair supporting the SV
+        if read.next_reference_name==chr2 and abs(read.next_reference_start-pos2)<1000 and ((not has_XA) or has_correct_SA):
+            reads_PR.add(read.query_name)
+
+    for read in samfile.fetch(chr2, pos2-200, pos2+200):
+        if read.is_supplementary: continue
+        has_XA=False
+        has_SA=False
+        for t in read.tags:
+                if t[0]=="XA": has_XA=True
+                elif t[0]=="SA": has_SA=True
+        if (has_XA and not has_SA) or (read.mapq<=35 and not has_SA) or read.mapq<=10:
+            reads_filtered.add(read.query_name)
+            continue
+        # Check for split-read (supplementary alignment)
+        has_correct_SA=False
+        for t in read.tags:
+            if t[0]=="SA":
+                for s in t[1][:-1].split(";"):
+                    s_split = s.split(",")
+                    s_chr = s_split[0]
+                    s_start = int(s_split[1])
+                    if (s_chr==chr and abs(pos-s_start)<1000):
+                        reads_SR.add(read.query_name)
+                        has_correct_SA=True
+        # Check for read pair supporting the SV
+        if read.next_reference_name==chr and abs(read.next_reference_start-pos)<1000 and ((not has_XA) or has_correct_SA):
+            reads_PR.add(read.query_name)
+
+    for x in reads_filtered:
+        if x in reads_PR:
+            reads_PR.remove(x)
+        if x in reads_SR:
+            reads_SR.remove(x)
+        
+
+    print("PR " +str(len(reads_PR))+"; SR "+str(len(reads_SR)))
+    print(reads_PR)
+    print(reads_SR)
+    
+    return len(reads_PR)<args.minPR or len(reads_SR)<args.minSR
+
+def many_mates_in_region(samfile,chr,pos,stringent):
+    # In some regions, there are reads whose mates map to many different regions. These regions are unreliable.
+    regions_mates={}
+    for read in samfile.fetch(chr, pos-20, pos+20):
+        if read.mapq>=45:
+            new_region=True
+            for (chrom,position) in regions_mates:
+                if chrom==read.next_reference_name and abs(position-read.next_reference_start)<50000:
+                    new_region=False
+                    regions_mates[(chrom,position)]+=1
+            if new_region:
+                regions_mates[(read.next_reference_name,read.next_reference_start)] =1
+    print("Regions of mates: ")
+    print(regions_mates)
+    count_regions=0
+    for x in regions_mates:
+        if regions_mates[x]>2: count_regions+=1
+    if not stringent: # less stringent filters is a CNA is close to the SV.
+        return count_regions>=7 or len(regions_mates)>=20
+    else:
+        return count_regions>=5 or len(regions_mates)>=12
 
 def reads_go_through_insertion(samfile,chr1,pos1,chr2,pos2):
     """Look for read pairs which go through an insertion"""
@@ -302,9 +412,33 @@ def readpair_goes_through_insertion(read,chr1,pos1,chr2,pos2,window_size=1000):
 
 #########################################################
 
-    
+# Read the CNV file
+CNA_breakpoints={}
+if args.cnv is not None:
+    with open(args.cnv,"r") as infile:
+        for line in infile:
+            linesplit=line.split("\t")
+            chr=linesplit[0]
+            start = int(linesplit[1])
+            end = int(linesplit[2])
+            if end-start>100000:
+                if not chr in CNA_breakpoints:
+                    CNA_breakpoints[chr]=[]
+                CNA_breakpoints[chr].append(start)
+                CNA_breakpoints[chr].append(end)
 
-# Write the filtered VCF
+def pos_close_to_CNA(chr,pos):
+    if chr in CNA_breakpoints:
+        for pos2 in CNA_breakpoints[chr]:
+            if abs(pos-pos2)<=30000:
+                return True
+    return False
+
+
+
+    
+#########################
+## Write the filtered VCF
 reader = vcfpy.Reader.from_path(args.i)
 header = reader.header
 #header.add_filter_line({"ID":"MAPPABILITY","Description":"Regions with low mappability close to the breakpoint."})
@@ -326,6 +460,7 @@ for record in reader:
         print("SV filtered due to insufficient number of supporting reads")
         continue
 
+
     # Filter based on minimum SV length
     filtered_length = (chr==chr2) and ( abs(pos-pos2) < args.minLen)
     if filtered_length:
@@ -337,13 +472,30 @@ for record in reader:
         print("SV filtered by Panel of Normal")
         continue
 
+    # Filter based on minimum number of supporting reads
+    if filter_min_SR_PR(samfile,chr,pos,chr2,pos2):
+        print("Filtered out because there were not enough reads supporting the SV, when removing reads with low mapq.")
+        continue
+
     # Filter out SVs where many of the reads in the region have low MAPQ, since these regions are unreliable.
     if low_mapq_in_region(samfile,chr,pos-100,pos+100,45) or low_mapq_in_region(samfile,chr2,pos2-100,pos2+100,45):
         print("Filtered out because many of the reads near the breakpoint had a low MAPQ.")
         continue
 
+    # Filter out SVs where the supporting reads have low MAPQ
+    #if low_mapq_SV(samfile,chr,pos,chr2,pos2,args.minPR) or low_mapq_SV(samfile,chr2,pos2,chr,pos,args.minPR):
+    #    print("Filtered out because many reads supporting the SV had a low MAPQ.")
+    #    continue
+
+    # Filter out SVs in regions where there are reads whose mates map to many different regions.
+    stringent = not (pos_close_to_CNA(chr,pos) or pos_close_to_CNA(chr2,pos2))
+    if many_mates_in_region(samfile,chr,pos,stringent) or many_mates_in_region(samfile,chr2,pos2,stringent):
+        print("Filtered out because reads in the region around the SV had mates mapped to many different regions")
+        continue
+
+
     # Filter out reads with PolyA insertions, since they probably come from retrotransposons
-    if "sequence" in dir(record.ALT[0]) and len(record.ALT[0].sequence) > 8 and (record.ALT[0].sequence =="A"*len(record.ALT[0].sequence) or record.ALT[0].sequence =="T" * len(record.ALT[0].sequence)):
+    if "sequence" in dir(record.ALT[0]) and ("AAAAAAAAA" in record.ALT[0] or "TTTTTTTTT" in record.ALT[0]):
         print("PolyA insertion: probably retrotransposon --> filter out")
         continue 
 
@@ -371,7 +523,7 @@ for record in reader:
             record.ALT[0] = vcfpy.BreakEnd(mate_chrom=chr,mate_pos = pos2, orientation = orientation, mate_orientation=orientation2,sequence="",within_main_assembly=True)
     """
 
-    if region_contains_genes(chr,pos-10000,pos+10000) or region_contains_genes(chr,pos2-10000,pos2+10000):
+    if region_contains_genes(chr,pos-10000,pos+10000) or region_contains_genes(chr2,pos2-10000,pos2+10000):
         print("Breakpoint close to gene")
         #writer.write_record(record)
         #continue
@@ -410,13 +562,13 @@ for record in reader:
                     print("Reciprocal translocation")
             elif orientationOutward and BorientationOutward and orientationOutward2 and BorientationOutward2:
                 # Insertion with TSD
-                print("Small insertion with TSD -> filtered out")
+                print("Small insertion with TSD ")
                 filter_out_record = True
                 continue
             elif ( orientationOutward and BorientationOutward and (not orientationOutward2) and not (BorientationOutward2) ) \
                 or ( (not orientationOutward) and (not BorientationOutward) and orientationOutward2 and BorientationOutward2 ):
                 # Insertion from the first side into the second side, with a deletion at the insertion site.
-                print("Small insertion, with a small deletion at the inserted site -> filtered out")
+                print("Small insertion, with a small deletion at the inserted site -")
                 filter_out_record = True
                 continue
             else:
@@ -425,5 +577,8 @@ for record in reader:
 
     if filter_out_record: continue
     
-    print("Keep SV.")
+    if SV_explained_by_alternative_alignments(samfile,chr,pos,chr2,pos2) or SV_explained_by_alternative_alignments(samfile,chr2,pos2,chr,pos):
+        print("SV explained by alternative alignment.")
+        #continue
+    print("Keep SV")
     writer.write_record(record)

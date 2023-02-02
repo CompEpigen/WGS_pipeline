@@ -30,7 +30,8 @@ with open(data_dir+"/circos_chromosome_general.csv") as f:
         length = int(line[-1]) 
         chr_lengths[name] = length
         arc    = Garc(arc_id=name, size=length, interspace=1, raxis_range=(750,800), labelposition=60, label_visible=True) # ,facecolor="white"
-        circle.add_garc(arc) 
+        if args.sex!="XX" or name!="chrY":
+            circle.add_garc(arc) 
 
 circle.set_garcs(00,353) 
 
@@ -48,13 +49,14 @@ with open(data_dir+"/circos_chromosome_cytoband.csv") as f:
         name  = line[0]
         start = int(line[1])-1 
         width = int(line[2])-(int(line[1])-1) 
-        if name not in arcdata_dict:
-            arcdata_dict[name]["positions"] = []
-            arcdata_dict[name]["widths"]    = [] 
-            arcdata_dict[name]["colors"]    = [] 
-        arcdata_dict[name]["positions"].append(start) 
-        arcdata_dict[name]["widths"].append(width)
-        arcdata_dict[name]["colors"].append(color_dict[line[-1]])
+        if args.sex!="XX" or name!="chrY":
+            if name not in arcdata_dict:
+                arcdata_dict[name]["positions"] = []
+                arcdata_dict[name]["widths"]    = [] 
+                arcdata_dict[name]["colors"]    = [] 
+            arcdata_dict[name]["positions"].append(start) 
+            arcdata_dict[name]["widths"].append(width)
+            arcdata_dict[name]["colors"].append(color_dict[line[-1]])
 
 for key in arcdata_dict:
     circle.barplot(key, data=[1]*len(arcdata_dict[key]["positions"]), positions=arcdata_dict[key]["positions"], 
@@ -79,7 +81,8 @@ with open(args.cna,"r") as f:
         start = int(line[1])-1
         end   = int(line[2]) 
         mid   = (start+end)/2
-        if args.sex =="XY" and name in ["chrX","chrY"]:
+        #if args.sex =="XY" and name in ["chrX","chrY"]:
+        if False:
             value = min(float(line[3]),3.9)
         else:
             value = min(float(line[3])*2,3.9)

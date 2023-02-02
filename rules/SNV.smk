@@ -238,7 +238,7 @@ rule split_vcf_chr:
 rule run_freebayes_RNA:
 	params:
 		threads="3",
-		runtime="23:00",
+		runtime="36:00",
 		memory="6000"
 	input:
 		BAM= config["working_dir"]+"/BAM_RNA/{sample}.bam",
@@ -250,7 +250,6 @@ rule run_freebayes_RNA:
 	shell:
 		"freebayes -f {config[reference_fasta]} -F 0.0 -C 0 -G 0 --min-coverage 6 --limit-coverage 10000 -q 20 -t {input.bed_DNA} {input.BAM} | bcftools norm -f {config[reference_fasta]} | bcftools view -i 'INFO/DP>6' -o {output} -O z; "\
 		"bcftools index {output}"
-		#TODO: might want to use a lower threshold than 6.
 
 
 rule concat_freebayes_RNA_chr:
