@@ -563,13 +563,13 @@ for record in reader:
                     print("Inversion") # TODO: inverted duplication ??
                 else:
                     print("Reciprocal translocation")
-            elif orientationOutward and BorientationOutward and orientationOutward2 and BorientationOutward2 and ((abs(pos-Bpos)<=25 and abs(pos2-Bpos2)>130) or (abs(pos2-Bpos2)<=25 and abs(pos-Bpos))):
+            elif orientationOutward and BorientationOutward and orientationOutward2 and BorientationOutward2 and ((abs(pos-Bpos)<=25 and abs(pos2-Bpos2)>130) or (abs(pos2-Bpos2)<=25 and abs(pos-Bpos)) or (not "SR" in r.calls[args.tumorindex].data)):
                 # Insertion with TSD. The duplicated part must be small, but the insertion large (otherwise we would have found a read going through the insertion.)
                 print("Small insertion with TSD ")
                 filter_out_record = True
                 continue
-            elif ( orientationOutward and BorientationOutward and (not orientationOutward2) and not (BorientationOutward2) and abs(pos2-Bpos2)<=25 and abs(pos-Bpos)>130 ) \
-                or ( (not orientationOutward) and (not BorientationOutward) and orientationOutward2 and BorientationOutward2 and abs(pos-Bpos)<=25 and abs(pos2-Bpos2)>130):
+            elif ( orientationOutward and BorientationOutward and (not orientationOutward2) and not (BorientationOutward2) and ((not "SR" in r.calls[args.tumorindex].data) or (abs(pos2-Bpos2)<=25 and abs(pos-Bpos)>130)) ) \
+                or ( (not orientationOutward) and (not BorientationOutward) and orientationOutward2 and BorientationOutward2 and ((not "SR" in r.calls[args.tumorindex].data) or (abs(pos-Bpos)<=25 and abs(pos2-Bpos2)>130))):
                 # Insertion from the first side into the second side, with a deletion at the insertion site. The deletion must be <=25bp, and the insertion larger than 130bp, otherwise we would find reads going through the insertion
                 print("Small insertion, with a small deletion at the inserted site -")
                 filter_out_record = True

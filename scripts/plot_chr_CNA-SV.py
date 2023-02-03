@@ -52,6 +52,7 @@ else:
     open(args.o+"_chrY."+args.format,"w").close() # create empty chrY file so that the pipeline knows that all output files are there.
 
 for chr in chromosomes:
+    print(chr)
     df_CNA_chr = df_CNA.loc[df_CNA["chr"]==chr,:]
     df_SV_chr = df_SV.loc[df_SV["chr"]==chr,:]
     df_SV_chr.reset_index(inplace=True)
