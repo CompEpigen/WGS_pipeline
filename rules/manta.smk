@@ -2,7 +2,7 @@ rule run_manta_nocontrol:
 	params:
 		threads="8",
 		runtime="20:00",
-		memory="16000"
+		memory="8000"
 	input:
 		BAM= config["working_dir"]+"/BAM/{sample}.bam"
 	output:
@@ -12,12 +12,15 @@ rule run_manta_nocontrol:
 	shell:
 		"python {config[manta_bin]}/configManta.py --tumorBam {input.BAM} "\
 		"--referenceFasta {config[reference_fasta]} "\
-		"--runDir {config[working_dir]}/tmp/SV/manta_nocontrol/{wildcards.sample} "\
+		"--runDir ${{TMPDIR}}/manta_nocontrol/{wildcards.sample} "\
 		"--callRegions data/hs37d5_chr.bed.gz --exome;"\
-		"python {config[working_dir]}/tmp/SV/manta_nocontrol/{wildcards.sample}/runWorkflow.py -j {params.threads} -g 16; "\
-		"cp {config[working_dir]}/tmp/SV/manta_nocontrol/{wildcards.sample}/results/variants/tumorSV.vcf.gz {config[working_dir]}/out_nocontrol/SV/manta/{wildcards.sample}/{wildcards.sample}_SV_unfiltered.vcf.gz; "\
+		"python ${{TMPDIR}}/manta_nocontrol/{wildcards.sample}/runWorkflow.py -j {params.threads} -g 8; "\
+		"cp ${{TMPDIR}}/manta_nocontrol/{wildcards.sample}/results/variants/tumorSV.vcf.gz {config[working_dir]}/out_nocontrol/SV/manta/{wildcards.sample}/{wildcards.sample}_SV_unfiltered.vcf.gz; "\
 		"gunzip -d {config[working_dir]}/out_nocontrol/SV/manta/{wildcards.sample}/{wildcards.sample}_SV_unfiltered.vcf.gz; "\
-		"rm -r {config[working_dir]}/tmp/SV/manta_nocontrol/{wildcards.sample}"
+		"rm -r ${{TMPDIR}}/manta_nocontrol/{wildcards.sample}"
+
+
+#"--runDir {config[working_dir]}/tmp/SV/manta_nocontrol/{wildcards.sample} "\
 
 rule run_manta_control:
 	params:
@@ -34,10 +37,10 @@ rule run_manta_control:
 	shell:
 		"python {config[manta_bin]}/configManta.py --normalBam {input.BAM_normal} --tumorBam {input.BAM_tumor} "\
 		"--referenceFasta {config[reference_fasta]} "\
-		"--runDir ${{SCRATCHDIR}}/${{LSB_JOBID}}/manta/{wildcards.sample} "\
+		"--runDir ${{TMPDIR}}/manta/{wildcards.sample} "\
 		"--callRegions data/hs37d5_chr.bed.gz --exome;"\
-		"python ${{SCRATCHDIR}}/${{LSB_JOBID}}/manta/{wildcards.sample}/runWorkflow.py -j {params.threads} -g 16; "\
-		"cp ${{SCRATCHDIR}}/${{LSB_JOBID}}/manta/{wildcards.sample}/results/variants/somaticSV.vcf.gz {output}.gz; "\
+		"python ${{TMP}}/manta/{wildcards.sample}/runWorkflow.py -j {params.threads} -g 16; "\
+		"cp ${{TMPDIR}}/manta/{wildcards.sample}/results/variants/somaticSV.vcf.gz {output}.gz; "\
 		"gunzip -d {output}.gz; "\
 
 
@@ -57,7 +60,7 @@ rule postprocess_manta_nocontrol:
 	shell:
 		"python scripts/postprocess_mantaVCF.py -i {input.VCF} -o {output} "\
 		"--minPR {config[manta_minPR]} --minSR {config[manta_minSR]} --minLen {config[manta_minLen_nocontrol]} "\
-		"--pon {config[manta_pon]} --bam {input.BAM} --mappability {config[manta_mappability]} --cnv {input.CNAs} "
+		"--pon {config[manta_pon]} --bam {input.BAM} --cnv {input.CNAs} "
 
 rule postprocess_manta_control:
 	params:

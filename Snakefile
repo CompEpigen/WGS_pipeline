@@ -67,7 +67,6 @@ def sample2bamfile(wcs):
 	else:
 		return df_samplesheet.loc[sample,"path_bam"]
 
-"""
 rule filter_BAM:
 	params:
 		threads="8",
@@ -79,8 +78,9 @@ rule filter_BAM:
 		BAM = config["working_dir"]+"/BAM/{sample}.bam",
 		BAM_i = config["working_dir"]+"/BAM/{sample}.bam.bai"
 	shell:
-		"sambamba view -t 8 -F '[XA]==null and mapping_quality >35' {input} -f bam -o {output.BAM}"
-""""
+		"sambamba view -t 8 -F 'mapping_quality >5' {input} -f bam -o {output.BAM}"
+		#"sambamba view -t 8 -F '[XA]==null and mapping_quality >35' {input} -f bam -o {output.BAM}"
+"""
 
 rule symlink_BAM:
 	params:
@@ -94,6 +94,8 @@ rule symlink_BAM:
 		BAM_i = config["working_dir"]+"/BAM/{sample}.bam.bai"
 	shell:
 		"ln -s {input} {output.BAM}; ln -s {input}.bai {output.BAM_i}"
+
+"""
 
 
 def sample2bamfile_RNA(wcs):
