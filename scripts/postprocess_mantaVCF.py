@@ -227,7 +227,7 @@ def low_mapq_in_region(samfile,chr,start,end,mapq_threshold=45):
     if pos_close_to_CNA(chr,(start+end)/2):
         return count_lowmapq/(count_lowmapq+count_highmapq) >=0.40
     else:
-        return count_lowmapq/(count_lowmapq+count_highmapq) >=0.20
+        return count_lowmapq/(count_lowmapq+count_highmapq) >=0.2
 
 def low_mapq_SV(samfile,chr,pos,chr2,pos2,min_reads,mapq_threshold=45):
     count_supporting_highMAPQ=0
@@ -413,6 +413,32 @@ def readpair_goes_through_insertion(read,chr1,pos1,chr2,pos2,window_size=1000):
 
     return False
 
+def reads_bordered_by_two_breakpoints(samfile,chr,pos1,pos2):
+    """Look for reads which have soft or hard clipping on both ends, and which start and end at the correct locations."""
+    pos1,pos2 = min(pos1,pos2),max(pos1,pos2)
+    count_insertions=0
+    for read in samfile.fetch(chr,pos1-100,pos2+100):
+        if abs(read.reference_start-pos1)<=6 and abs(read.query_alignment_length+read.reference_start-pos2)<=6:
+            if (read.cigarstring.endswith("S") or read.cigarstring.endswith("H")):
+                if ((read.cigarstring.find("S")>0 and read.cigarstring.find("S")<read.cigarstring.find("M")) or (read.cigarstring.find("H")>0 and read.cigarstring.find("H")<read.cigarstring.find("M")) ):
+                    count_insertions+=1
+    if count_insertions>0:
+        print("Insertion count: "+ str(count_insertions))
+    return count_insertions>=4
+
+    samfile = pysam.AlignmentFile("/home/e840r/Documents/WGS/viz/BAM/16KM16320_extract.bam", "rb")
+for read in samfile.fetch("12",27940264,27940764,):
+    
+        print(read)
+        print(dir(read))
+        print(read.query_alignment_start)
+        print(read.query_alignment_end)
+        print(read.query_alignment_length)
+        print(read.reference_start)
+        print(read.query_alignment_length+read.reference_start)
+        print(read.qname)
+        print("-----")
+
 #########################################################
 
 # Read the CNV file
@@ -552,10 +578,16 @@ for record in reader:
                 orientationOutward2 = (orientation2=="-")
                 BorientationOutward2 = (Borientation2=="+")
             
-            if abs(pos-Bpos)<100 and abs(pos2-Bpos2)<100: 
+            if abs(pos-Bpos)<120 and abs(pos2-Bpos2)<120: 
                 if reads_go_through_insertion(samfile,chr,pos,chr2,pos2):
                     print("Small insertion, because some read pairs going through the whole insertion were detected")
                     filter_out_record=True
+                elif reads_bordered_by_two_breakpoints(samfile,chr,pos,Bpos) or reads_bordered_by_two_breakpoints(samfile,chr2,pos2,Bpos2):
+                    print("Small insertion, because some reads have clipping at both breakends.")
+                    filter_out_record=True
+            elif reads_bordered_by_two_breakpoints(samfile,chr,pos,Bpos) or reads_bordered_by_two_breakpoints(samfile,chr2,pos2,Bpos2):
+                print("Small insertion, because some reads have clipping at both breakends.")
+                filter_out_record=True
             elif abs(pos-Bpos)<1000 and abs(pos2-Bpos2)<1000 and args.keepCloseSV:
                 print("Close SVs") 
             elif (not orientationOutward) and (not BorientationOutward) and (not orientationOutward2) and (not BorientationOutward2):
@@ -563,7 +595,7 @@ for record in reader:
                     print("Inversion") # TODO: inverted duplication ??
                 else:
                     print("Reciprocal translocation")
-            elif orientationOutward and BorientationOutward and orientationOutward2 and BorientationOutward2 and ((abs(pos-Bpos)<=25 and abs(pos2-Bpos2)>130) or (abs(pos2-Bpos2)<=25 and abs(pos-Bpos)) or (not "SR" in r.calls[args.tumorindex].data)):
+            elif orientationOutward and BorientationOutward and orientationOutward2 and BorientationOutward2 and ((abs(pos-Bpos)<=25 and abs(pos2-Bpos2)>130) or (abs(pos2-Bpos2)<=25 and abs(pos-Bpos)>130) or (not "SR" in r.calls[args.tumorindex].data)):
                 # Insertion with TSD. The duplicated part must be small, but the insertion large (otherwise we would have found a read going through the insertion.)
                 print("Small insertion with TSD ")
                 filter_out_record = True
@@ -574,6 +606,28 @@ for record in reader:
                 print("Small insertion, with a small deletion at the inserted site -")
                 filter_out_record = True
                 continue
+            elif abs(pos-Bpos)<=5: # The orientation might be wrong...
+                if (not orientationOutward) and (not BorientationOutward) and orientationOutward2 and BorientationOutward2 and (( abs(pos2-Bpos2)>130) or (not "SR" in r.calls[args.tumorindex].data)):
+                    # Insertion with TSD. The duplicated part must be small, but the insertion large (otherwise we would have found a read going through the insertion.)
+                    print("Small insertion with TSD ")
+                    filter_out_record = True
+                    continue
+                elif (orientationOutward) and (BorientationOutward) and orientationOutward2 and BorientationOutward2 and ((not "SR" in r.calls[args.tumorindex].data) or  abs(pos2-Bpos2)>130):
+                    # Insertion from the first side into the second side, with a deletion at the insertion site. The deletion must be <=25bp, and the insertion larger than 130bp, otherwise we would find reads going through the insertion
+                    print("Small insertion, with a small deletion at the inserted site -")
+                    filter_out_record = True
+                    continue
+            elif abs(pos2-Bpos2)<=5: # orientation might be wrong.
+                if orientationOutward and BorientationOutward and (not orientationOutward2) and (not BorientationOutward2) and ( abs(pos-Bpos)>130 or (not "SR" in r.calls[args.tumorindex].data)):
+                    # Insertion with TSD. The duplicated part must be small, but the insertion large (otherwise we would have found a read going through the insertion.)
+                    print("Small insertion with TSD ")
+                    filter_out_record = True
+                    continue
+                elif orientationOutward and BorientationOutward and orientationOutward2 and BorientationOutward2 and ((not "SR" in r.calls[args.tumorindex].data)and abs(pos-Bpos)>130):
+                    # Insertion from the first side into the second side, with a deletion at the insertion site. The deletion must be <=25bp, and the insertion larger than 130bp, otherwise we would find reads going through the insertion
+                    print("Small insertion, with a small deletion at the inserted site -")
+                    filter_out_record = True
+                    continue
             else:
                 print("Rearrangement is not clear -> keep.")
         print("-")
