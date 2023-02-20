@@ -268,7 +268,7 @@ def SV_explained_by_alternative_alignments(samfile,chr1,pos1,chr2,pos2):
                     count_reads_supportingSV_withXA+=1
 
     print("Reads supporting SV: " +str(count_reads_supportingSV)+"; with XA: "+str(count_reads_supportingSV_withXA))
-    return (count_reads_supportingSV_withXA>4*count_reads_supportingSV or (count_reads_supportingSV-count_reads_supportingSV_withXA)<args.minPR)
+    return (count_reads_supportingSV_withXA>0.5*count_reads_supportingSV or (count_reads_supportingSV-count_reads_supportingSV_withXA)<args.minPR)
 
 
 def filter_min_SR_PR(samfile,chr1,pos1,chr2,pos2):
@@ -425,20 +425,6 @@ def reads_bordered_by_two_breakpoints(samfile,chr,pos1,pos2):
     if count_insertions>0:
         print("Insertion count: "+ str(count_insertions))
     return count_insertions>=4
-
-    samfile = pysam.AlignmentFile("/home/e840r/Documents/WGS/viz/BAM/16KM16320_extract.bam", "rb")
-for read in samfile.fetch("12",27940264,27940764,):
-    
-        print(read)
-        print(dir(read))
-        print(read.query_alignment_start)
-        print(read.query_alignment_end)
-        print(read.query_alignment_length)
-        print(read.reference_start)
-        print(read.query_alignment_length+read.reference_start)
-        print(read.qname)
-        print("-----")
-
 #########################################################
 
 # Read the CNV file
@@ -636,6 +622,7 @@ for record in reader:
     
     if SV_explained_by_alternative_alignments(samfile,chr,pos,chr2,pos2) or SV_explained_by_alternative_alignments(samfile,chr2,pos2,chr,pos):
         print("SV explained by alternative alignment.")
+        if stringent: continue
         #continue
     print("Keep SV")
     writer.write_record(record)

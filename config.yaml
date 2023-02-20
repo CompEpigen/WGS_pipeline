@@ -2,6 +2,8 @@
 working_dir: /path/to/working_dir
 samplesheet: samplesheet.csv
 
+make_plots: true
+call_SNVs: true 
 use_control: true
 
 

@@ -45,17 +45,33 @@ if "path_BAM_RNA" in df_samplesheet.columns:
 		if df_samplesheet.loc[sample,"path_BAM_RNA"]!="":
 			samples_RNA.append(sample)
 
-
+required_outputs = []
+for sample in samples_nocontrol:
+	if config["make_plots"]:
+		required_inputs.append(config["working_dir"]+"/out_nocontrol/plots/chrplots_png/"+sample+"/"+sample+"_chr1.png")
+		required_inputs.append(config["working_dir"]+"/out_nocontrol/plots/circos/"+sample+"/circos_"+sample+".svg")
+	if config["call_SNVs"]:
+		required_inputs.append(config["working_dir"]+"/out_nocontrol/SNV/mutect2_genePanel/"+sample+"/"+sample+".tsv")
+for sample in samples_control:
+	if config["make_plots"]:
+		required_inputs.append(config["working_dir"]+"/out_control/plots/chrplots_png/"+sample+"/"+sample+"_chr1.png")
+		required_inputs.append(config["working_dir"]+"/out_control/plots/circos/"+sample+"/circos_"+sample+".svg")
+	if config["call_SNVs"]:
+		required_inputs.append(config["working_dir"]+"/out_control/SNV/mutect2_wholegenome/"+sample+"/"+sample+".tsv")
 
 rule all:
 	input:
-		expand(config["working_dir"]+"/out_nocontrol/plots/chrplots_png/{sample}/{sample}_chr{chr}.png",sample=samples_nocontrol,chr=chromosomes),
-		expand(config["working_dir"]+"/out_nocontrol/plots/circos/circos_{sample}.svg",sample=samples_nocontrol),
-		expand(config["working_dir"]+"/out_nocontrol/SNV/mutect2_genePanel/{sample}/{sample}.tsv",sample=samples_nocontrol),
-		expand(config["working_dir"]+"/out_control/plots/chrplots_png/{sample}/{sample}_chr{chr}.png",sample=samples_control,chr=chromosomes),
-		expand(config["working_dir"]+"/out_control/plots/circos/circos_{sample}.svg",sample=samples_control),
-		expand(config["working_dir"]+"/out_control/SNV/mutect2_wholegenome/{sample}/{sample}.tsv",sample=samples_control),
-		expand(config["working_dir"]+"/out_control/SNV/freebayes_RNA/{sample}/{sample}.vcf.gz",sample=samples_control)
+		required_outputs
+
+#rule all:
+#	input:
+#		expand(config["working_dir"]+"/out_nocontrol/plots/chrplots_png/{sample}/{sample}_chr{chr}.png",sample=samples_nocontrol,chr=chromosomes),
+#		expand(config["working_dir"]+"/out_nocontrol/plots/circos/circos_{sample}.svg",sample=samples_nocontrol),
+#		expand(config["working_dir"]+"/out_nocontrol/SNV/mutect2_genePanel/{sample}/{sample}.tsv",sample=samples_nocontrol),
+#		expand(config["working_dir"]+"/out_control/plots/chrplots_png/{sample}/{sample}_chr{chr}.png",sample=samples_control,chr=chromosomes),
+#		expand(config["working_dir"]+"/out_control/plots/circos/circos_{sample}.svg",sample=samples_control),
+#		expand(config["working_dir"]+"/out_control/SNV/mutect2_wholegenome/{sample}/{sample}.tsv",sample=samples_control),
+#		expand(config["working_dir"]+"/out_control/SNV/freebayes_RNA/{sample}/{sample}.vcf.gz",sample=samples_control)
 
 
 # Filter the BAM files by removing reads which align to several locations

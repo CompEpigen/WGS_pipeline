@@ -77,7 +77,7 @@ rule postprocess_manta_control:
 	shell:
 		"python scripts/postprocess_mantaVCF.py -i {input.VCF} -o {output} "\
 		"--minPR {config[manta_minPR]} --minSR {config[manta_minSR]} --minLen {config[manta_minLen_control]} "\
-		"--bam {input.BAM} --tumorindex 1"
+		"--bam {input.BAM} --tumorindex 1 --pon {config[manta_pon]} "
 
 rule create_vizualization_datafiles_manta:
 	params:
