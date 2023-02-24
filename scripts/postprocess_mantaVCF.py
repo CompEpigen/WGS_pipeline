@@ -25,6 +25,7 @@ parser.add_argument('--mappability', type = str, help='bed file containing the r
 parser.add_argument('--cnv', type = str, help='cnv file produced by control freec. Less stringent filters are used for SVs close to CNA borders.')
 parser.add_argument('--tumorindex', type = int,default=0, help='Index of the tumor sample (0 if only the tumor sample was provided, 1 if a control was used).')
 parser.add_argument('--keepCloseSV', type = int,default=0, help='If set to 1, will not filter out two SVs whose breakpoints are close to each other (could be reciprocal translocation)')
+parser.add_argument('--filterSmallInsertions', type = int,default=1, help='If set to 0, will not filter out SVs resulting in small insertions.')
 args = parser.parse_args()
 
 
@@ -618,7 +619,7 @@ for record in reader:
                 print("Rearrangement is not clear -> keep.")
         print("-")
 
-    if filter_out_record: continue
+    if filter_out_record and (args.filterSmallInsertions ==1): continue
     
     if SV_explained_by_alternative_alignments(samfile,chr,pos,chr2,pos2) or SV_explained_by_alternative_alignments(samfile,chr2,pos2,chr,pos):
         print("SV explained by alternative alignment.")

@@ -17,6 +17,9 @@ manta_minSR: 5
 # Minimum length of SVs
 manta_minLen_nocontrol: 40000
 manta_minLen_control: 200
+# Small insertions are often germline events (retrotransposons), so by default they are filtered out when a matched control is not available.
+manta_filterSmallInsertions_nocontrol: true
+manta_filterSmallInsertions_control: false
 # (optional) Path to a Panel of Normal: bed file containing regions where SVs were identified in healthy samples.
 manta_pon : data/PoN_SV_1000G.bed
 # (optional) bed file containing regions of low mappability. 

@@ -60,7 +60,7 @@ rule postprocess_manta_nocontrol:
 	shell:
 		"python scripts/postprocess_mantaVCF.py -i {input.VCF} -o {output} "\
 		"--minPR {config[manta_minPR]} --minSR {config[manta_minSR]} --minLen {config[manta_minLen_nocontrol]} "\
-		"--pon {config[manta_pon]} --bam {input.BAM} --cnv {input.CNAs} "
+		"--pon {config[manta_pon]} --bam {input.BAM} --cnv {input.CNAs} --filterSmallInsertions {manta_filterSmallInsertions_nocontrol}"
 
 rule postprocess_manta_control:
 	params:
@@ -77,7 +77,7 @@ rule postprocess_manta_control:
 	shell:
 		"python scripts/postprocess_mantaVCF.py -i {input.VCF} -o {output} "\
 		"--minPR {config[manta_minPR]} --minSR {config[manta_minSR]} --minLen {config[manta_minLen_control]} "\
-		"--bam {input.BAM} --tumorindex 1 --pon {config[manta_pon]} "
+		"--bam {input.BAM} --tumorindex 1 --pon {config[manta_pon]} --filterSmallInsertions {manta_filterSmallInsertions_control}"
 
 rule create_vizualization_datafiles_manta:
 	params:

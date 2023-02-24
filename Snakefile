@@ -3,6 +3,13 @@ import pysam
 
 chromosomes = [str(x) for x in range(1,23)] + ["X","Y"]
 chromosomes_noY = [str(x) for x in range(1,23)] + ["X"]
+manta_filterSmallInsertions_nocontrol = "1"
+if "manta_filterSmallInsertions_nocontrol" in config and not config["manta_filterSmallInsertions_nocontrol"]:
+	manta_filterSmallInsertions_nocontrol = "0"
+manta_filterSmallInsertions_control = "0"
+if "manta_filterSmallInsertions_control" in config and config["manta_filterSmallInsertions_control"]:
+	manta_filterSmallInsertions_control = "1"
+
 
 
 df_samplesheet = pd.read_csv(config["samplesheet"],sep=",",index_col=0)
@@ -48,16 +55,16 @@ if "path_BAM_RNA" in df_samplesheet.columns:
 required_outputs = []
 for sample in samples_nocontrol:
 	if config["make_plots"]:
-		required_inputs.append(config["working_dir"]+"/out_nocontrol/plots/chrplots_png/"+sample+"/"+sample+"_chr1.png")
-		required_inputs.append(config["working_dir"]+"/out_nocontrol/plots/circos/"+sample+"/circos_"+sample+".svg")
+		required_outputs.append(config["working_dir"]+"/out_nocontrol/plots/chrplots_png/"+sample+"/"+sample+"_chr1.png")
+		required_outputs.append(config["working_dir"]+"/out_nocontrol/plots/circos/circos_"+sample+".svg")
 	if config["call_SNVs"]:
-		required_inputs.append(config["working_dir"]+"/out_nocontrol/SNV/mutect2_genePanel/"+sample+"/"+sample+".tsv")
+		required_outputs.append(config["working_dir"]+"/out_nocontrol/SNV/mutect2_genePanel/"+sample+"/"+sample+".tsv")
 for sample in samples_control:
 	if config["make_plots"]:
-		required_inputs.append(config["working_dir"]+"/out_control/plots/chrplots_png/"+sample+"/"+sample+"_chr1.png")
-		required_inputs.append(config["working_dir"]+"/out_control/plots/circos/"+sample+"/circos_"+sample+".svg")
+		required_outputs.append(config["working_dir"]+"/out_control/plots/chrplots_png/"+sample+"/"+sample+"_chr1.png")
+		required_outputs.append(config["working_dir"]+"/out_control/plots/circos/circos_"+sample+".svg")
 	if config["call_SNVs"]:
-		required_inputs.append(config["working_dir"]+"/out_control/SNV/mutect2_wholegenome/"+sample+"/"+sample+".tsv")
+		required_outputs.append(config["working_dir"]+"/out_control/SNV/mutect2_wholegenome/"+sample+"/"+sample+".tsv")
 
 rule all:
 	input:

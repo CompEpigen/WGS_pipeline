@@ -5,9 +5,10 @@ window = 10000
 minCNAlength = 2
 chrLenFile = {chrLenFile}
 outputDir = {outdir}
-gemMappabilityFile = /omics/groups/OE0219/internal/Etienne/data/mappability/out100m2_hg19.gem
+#gemMappabilityFile = /omics/groups/OE0219/internal/Etienne/data/mappability/out100m2_hg19.gem
 maxThreads = 8
 contaminationAdjustment = TRUE
+GCcontentProfile = data/GC_profile_FREEC_PoN-1000G.cnp
 sex = {SEX}
 readCountThreshold = 100
 
